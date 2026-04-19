@@ -7,8 +7,8 @@ const uid = () => ++_uid;
 /* ─── Constants ─── */
 const PREFS = [
   { key: "attack",  label: "Anfall",  icon: "⚡", color: "#f97316" },
-  { key: "neutral", label: "Neutral", icon: "⚖",  color: "#94a3b8" },
-  { key: "defense", label: "Försvar", icon: "🛡",  color: "#60a5fa" },
+  { key: "neutral", label: "Neutral", icon: "⚖\uFE0F",  color: "#94a3b8" },
+  { key: "defense", label: "Försvar", icon: "🛡\uFE0F",  color: "#60a5fa" },
 ];
 const PM = Object.fromEntries(PREFS.map(p => [p.key, p]));
 
@@ -213,13 +213,14 @@ export default function App() {
       <div
         onClick={e => { e.stopPropagation(); tapPlayer(id); }}
         style={{
-          display: "inline-flex", alignItems: "center", gap: 5,
+          display: "inline-flex", alignItems: "center", gap: 4,
+          maxWidth: "100%", overflow: "hidden",
           background: isSelected ? "#fef08a" : "#0f172a",
           color: isSelected ? "#0f172a" : "#e2e8f0",
           border: `2px solid ${isSelected ? "#fbbf24" : p.isGK ? "#fbbf24" : pref.color}`,
           borderRadius: 8,
-          padding: small ? "3px 8px" : "5px 10px",
-          fontSize: small ? 12 : 14,
+          padding: small ? "3px 7px" : "4px 8px",
+          fontSize: small ? 12 : 13,
           fontWeight: 600,
           cursor: "pointer",
           transition: "all 0.15s",
@@ -232,7 +233,7 @@ export default function App() {
           ? <span style={{ fontSize: 10, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
           : <span style={{ fontSize: 11 }}>{pref.icon}</span>
         }
-        <span>{p.name}</span>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
         {!small && plan && (
           <span style={{
             fontSize: 10, color: isSelected ? "#713f12" : "#64748b",
@@ -246,13 +247,13 @@ export default function App() {
   };
 
   const PositionSlot = ({ id, label }) => (
-    <div style={{ textAlign: "center", minWidth: 70 }}>
-      <div style={{ fontSize: 9, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 5, fontWeight: 600 }}>
+    <div style={{ textAlign: "center", flex: "1 1 0", minWidth: 0, maxWidth: 120 }}>
+      <div style={{ fontSize: 9, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5, fontWeight: 600 }}>
         {label}
       </div>
       {id
         ? <Chip id={id} />
-        : <div style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 14px", fontSize: 12, color: "#334155" }}>—</div>
+        : <div style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 8px", fontSize: 12, color: "#334155" }}>—</div>
       }
     </div>
   );
@@ -286,11 +287,11 @@ export default function App() {
 
       {/* Header */}
       <div style={S.header}>
-        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 30, letterSpacing: 3, color: "#f8fafc", lineHeight: 1 }}>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(20px, 7vw, 30px)", letterSpacing: 2, color: "#f8fafc", lineHeight: 1 }}>
           Laguppställning {settings.format}
         </div>
-        <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>
-          {players.length} spelare &nbsp;·&nbsp; {settings.periods} perioder &nbsp;·&nbsp; {settings.duration} min/period &nbsp;·&nbsp; {settings.subs} byte/period
+        <div style={{ fontSize: 11, color: "#475569", marginTop: 4, lineHeight: 1.6 }}>
+          {players.length} sp &nbsp;·&nbsp; {settings.periods} per &nbsp;·&nbsp; {settings.duration} min &nbsp;·&nbsp; {settings.subs} byte
         </div>
       </div>
 
@@ -314,13 +315,13 @@ export default function App() {
             </div>
 
             {players.map(p => (
-              <div key={p.id} style={{ ...S.card, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+              <div key={p.id} style={{ ...S.card, padding: "10px 12px", display: "flex", alignItems: "center", gap: 6 }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: p.isGK ? "#fbbf24" : PM[p.pref].color, flexShrink: 0 }} />
 
                 <input
                   value={p.name}
                   onChange={e => updP(p.id, "name", e.target.value)}
-                  style={{ flex: 1, background: "none", border: "none", color: "#e2e8f0", fontSize: 15, fontWeight: 500, outline: "none" }}
+                  style={{ flex: 1, minWidth: 0, background: "none", border: "none", color: "#e2e8f0", fontSize: 15, fontWeight: 500, outline: "none" }}
                 />
 
                 <button
@@ -527,7 +528,7 @@ export default function App() {
                     <div style={{ fontSize: 9, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 10, fontWeight: 600 }}>
                       ⚡ Anfallszon
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
                       {period.att.map((id, j) => <PositionSlot key={j} id={id} label={`Anfall ${j + 1}`} />)}
                     </div>
                   </div>
@@ -548,7 +549,7 @@ export default function App() {
                       <div style={{ fontSize: 9, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 10, fontWeight: 600 }}>
                         ⚖ Mittfält
                       </div>
-                      <div style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 6 }}>
+                      <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
                         {(period.mid ?? []).map((id, j) => <PositionSlot key={j} id={id} label={`Mitt ${j + 1}`} />)}
                       </div>
                     </div>
@@ -556,7 +557,7 @@ export default function App() {
 
                   {/* Defense zone */}
                   <div style={{ marginBottom: 4 }}>
-                    <div style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
                       {period.def.map((id, j) => <PositionSlot key={j} id={id} label={`Försvar ${j + 1}`} />)}
                     </div>
                     <div style={{ fontSize: 9, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 10, fontWeight: 600 }}>
