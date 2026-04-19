@@ -12,6 +12,15 @@ const PREFS = [
 ];
 const PM = Object.fromEntries(PREFS.map(p => [p.key, p]));
 
+const FORMATS = [
+  { key: "3v3",   label: "3v3",   hasGK: false, total: 3,  att: 1, mid: 0, def: 2 },
+  { key: "5v5",   label: "5v5",   hasGK: true,  total: 5,  att: 2, mid: 0, def: 2 },
+  { key: "7v7",   label: "7v7",   hasGK: true,  total: 7,  att: 2, mid: 2, def: 2 },
+  { key: "9v9",   label: "9v9",   hasGK: true,  total: 9,  att: 2, mid: 3, def: 3 },
+  { key: "11v11", label: "11v11", hasGK: true,  total: 11, att: 3, mid: 3, def: 4 },
+];
+const FM = Object.fromEntries(FORMATS.map(f => [f.key, f]));
+
 const mkP = (name, isGK = false, pref = "neutral") => ({ id: uid(), name, isGK, pref });
 
 const DEMO = [
@@ -25,42 +34,61 @@ const DEMO = [
   mkP("Nora",   true,  "neutral"),
 ];
 
+/* ─── URL state ─── */
+const initFromURL = (() => {
+  try {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return null;
+    const decoded = JSON.parse(decodeURIComponent(atob(hash)));
+    if (decoded?.players && decoded?.settings) return decoded;
+  } catch {}
+  return null;
+})();
+
 /* ─── Auto-generate algorithm ─── */
 function generatePlan(players, settings) {
   const { periods, duration, subs } = settings;
+  const fmt = FM[settings.format] ?? FM["5v5"];
   const FULL = duration, HALF = duration / 2;
-  const gks = players.filter(p => p.isGK);
+  const fieldCount = fmt.att + fmt.mid + fmt.def;
+
+  const gks = fmt.hasGK ? players.filter(p => p.isGK) : [];
   const mins = Object.fromEntries(players.map(p => [p.id, 0]));
 
   return Array.from({ length: periods }, (_, i) => {
-    // Pick GK: cycle through designated GKs
-    const gkId = gks.length > 0
-      ? gks[i % gks.length].id
-      : [...players].sort((a, b) => mins[b.id] - mins[a.id])[0].id;
+    let gkId = null;
+    if (fmt.hasGK) {
+      gkId = gks.length > 0
+        ? gks[i % gks.length].id
+        : [...players].sort((a, b) => mins[b.id] - mins[a.id])[0].id;
+    }
 
-    // Sort non-GK players by fewest minutes
     const avail = players
       .filter(p => p.id !== gkId)
       .sort((a, b) => mins[a.id] - mins[b.id]);
 
-    const starters = avail.slice(0, 4);
-    const subIn = (subs >= 1 && avail.length >= 5) ? avail[4] : null;
+    const starters = avail.slice(0, fieldCount);
+    const subIn = (subs >= 1 && avail.length >= fieldCount + 1) ? avail[fieldCount] : null;
 
-    // Assign starters to positions by preference
-    const at = [], df = [];
+    const at = [], md = [], df = [];
     const pool = [...starters];
-    pool.filter(p => p.pref === "attack").forEach(p  => { if (at.length < 2) at.push(p.id); });
-    pool.filter(p => p.pref === "defense").forEach(p => { if (df.length < 2) df.push(p.id); });
-    const used = new Set([...at, ...df]);
-    pool.filter(p => !used.has(p.id)).forEach(p => {
-      if (at.length < 2) at.push(p.id);
-      else if (df.length < 2) df.push(p.id);
-    });
-    while (at.length < 2) at.push(null);
-    while (df.length < 2) df.push(null);
 
-    // Update minute tracking
-    mins[gkId] += FULL;
+    pool.filter(p => p.pref === "attack").forEach(p  => { if (at.length < fmt.att) at.push(p.id); });
+    pool.filter(p => p.pref === "neutral").forEach(p => { if (md.length < fmt.mid) md.push(p.id); });
+    pool.filter(p => p.pref === "defense").forEach(p => { if (df.length < fmt.def) df.push(p.id); });
+
+    const used = new Set([...at, ...md, ...df]);
+    pool.filter(p => !used.has(p.id)).forEach(p => {
+      if (at.length < fmt.att) at.push(p.id);
+      else if (md.length < fmt.mid) md.push(p.id);
+      else if (df.length < fmt.def) df.push(p.id);
+    });
+
+    while (at.length < fmt.att) at.push(null);
+    while (md.length < fmt.mid) md.push(null);
+    while (df.length < fmt.def) df.push(null);
+
+    if (gkId) mins[gkId] += FULL;
     starters.forEach(p => { mins[p.id] += FULL; });
     if (subIn) mins[subIn.id] += HALF;
 
@@ -69,6 +97,7 @@ function generatePlan(players, settings) {
     return {
       gk: gkId,
       def: df,
+      mid: md,
       att: at,
       subIn: subIn?.id ?? null,
       bench: players.filter(p => !usedIds.has(p.id)).map(p => p.id),
@@ -78,12 +107,16 @@ function generatePlan(players, settings) {
 
 /* ─── Main App ─── */
 export default function App() {
-  const [tab, setTab]       = useState("players");
-  const [players, setPlayers] = useState(DEMO);
+  const [tab, setTab]         = useState("players");
+  const [players, setPlayers] = useState(initFromURL?.players ?? DEMO);
   const [newName, setNewName] = useState("");
-  const [settings, setSettings] = useState({ periods: 3, duration: 15, subs: 1 });
-  const [plan, setPlan]     = useState(null);
-  const [sel, setSel]       = useState(null); // selected player id
+  const [settings, setSettings] = useState({
+    periods: 3, duration: 15, subs: 1, format: "5v5",
+    ...(initFromURL?.settings ?? {}),
+  });
+  const [plan, setPlan]     = useState(initFromURL?.plan ?? null);
+  const [sel, setSel]       = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -93,6 +126,14 @@ export default function App() {
     return () => { try { document.head.removeChild(link); } catch(e) {} };
   }, []);
 
+  useEffect(() => {
+    try {
+      const encoded = btoa(encodeURIComponent(JSON.stringify({ players, settings, plan })));
+      window.history.replaceState(null, "", "#" + encoded);
+    } catch {}
+  }, [players, settings, plan]);
+
+  const fmt = FM[settings.format] ?? FM["5v5"];
   const getP = id => players.find(p => p.id === id);
 
   const addPlayer = () => {
@@ -108,10 +149,18 @@ export default function App() {
   const delP = id => setPlayers(ps => ps.filter(p => p.id !== id));
 
   const doGenerate = () => {
-    if (players.length < 5) return alert("Lägg till minst 5 spelare!");
+    if (players.length < fmt.total) {
+      return alert(`Lägg till minst ${fmt.total} spelare för ${fmt.label}!`);
+    }
     setPlan(generatePlan(players, settings));
     setTab("plan");
     setSel(null);
+  };
+
+  const copyLink = () => {
+    navigator.clipboard?.writeText(window.location.href)
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })
+      .catch(() => {});
   };
 
   /* Global schedule swap of two players */
@@ -124,6 +173,7 @@ export default function App() {
     setPlan(pl => pl.map(period => ({
       gk:    sw(period.gk),
       def:   period.def.map(sw),
+      mid:   (period.mid ?? []).map(sw),
       att:   period.att.map(sw),
       subIn: sw(period.subIn),
       bench: period.bench.map(sw),
@@ -136,9 +186,10 @@ export default function App() {
     if (!plan) return {};
     const FULL = settings.duration, HALF = settings.duration / 2;
     const m = Object.fromEntries(players.map(p => [p.id, 0]));
-    plan.forEach(({ gk, def, att, subIn }) => {
+    plan.forEach(({ gk, def, mid, att, subIn }) => {
       if (gk) m[gk] = (m[gk] ?? 0) + FULL;
       def.forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
+      (mid ?? []).forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
       att.forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
       if (subIn) m[subIn] = (m[subIn] ?? 0) + HALF;
     });
@@ -155,7 +206,7 @@ export default function App() {
     if (!p) return null;
     const pref = PM[p.pref];
     const isSelected = sel === id;
-    const isSel2nd = sel && sel !== id; // something else selected
+    const isSel2nd = sel && sel !== id;
 
     return (
       <div
@@ -194,7 +245,7 @@ export default function App() {
   };
 
   const PositionSlot = ({ id, label }) => (
-    <div style={{ textAlign: "center", minWidth: 80 }}>
+    <div style={{ textAlign: "center", minWidth: 70 }}>
       <div style={{ fontSize: 9, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 5, fontWeight: 600 }}>
         {label}
       </div>
@@ -235,7 +286,7 @@ export default function App() {
       {/* Header */}
       <div style={S.header}>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 30, letterSpacing: 3, color: "#f8fafc", lineHeight: 1 }}>
-          Laguppställning 5v5
+          Laguppställning {settings.format}
         </div>
         <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>
           {players.length} spelare &nbsp;·&nbsp; {settings.periods} perioder &nbsp;·&nbsp; {settings.duration} min/period &nbsp;·&nbsp; {settings.subs} byte/period
@@ -263,24 +314,20 @@ export default function App() {
 
             {players.map(p => (
               <div key={p.id} style={{ ...S.card, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-                {/* Color dot */}
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: p.isGK ? "#fbbf24" : PM[p.pref].color, flexShrink: 0 }} />
 
-                {/* Name */}
                 <input
                   value={p.name}
                   onChange={e => updP(p.id, "name", e.target.value)}
                   style={{ flex: 1, background: "none", border: "none", color: "#e2e8f0", fontSize: 15, fontWeight: 500, outline: "none" }}
                 />
 
-                {/* GK toggle */}
                 <button
                   onClick={() => updP(p.id, "isGK", !p.isGK)}
                   style={{ ...S.btn(p.isGK ? "primary" : "ghost"), padding: "3px 8px", fontSize: 11, borderRadius: 6, border: p.isGK ? "none" : "1px solid #334155" }}>
                   MV
                 </button>
 
-                {/* Pref pills */}
                 <div style={{ display: "flex", gap: 3 }}>
                   {PREFS.map(pr => (
                     <button key={pr.key} onClick={() => updP(p.id, "pref", pr.key)}
@@ -296,7 +343,6 @@ export default function App() {
                   ))}
                 </div>
 
-                {/* Delete */}
                 <button onClick={() => delP(p.id)}
                   style={{ background: "none", border: "none", color: "#334155", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "0 2px" }}>
                   ×
@@ -340,9 +386,32 @@ export default function App() {
 
             {/* Settings */}
             <div style={{ ...S.card, padding: "14px" }}>
-              <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
                 Matchinställningar
               </div>
+
+              {/* Format selector */}
+              <div style={{ marginBottom: 16 }}>
+                <span style={{ color: "#cbd5e1", fontSize: 14, display: "block", marginBottom: 8 }}>Spelform</span>
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  {FORMATS.map(f => (
+                    <button key={f.key}
+                      onClick={() => setSettings(s => ({ ...s, format: f.key }))}
+                      style={{
+                        ...S.btn(settings.format === f.key ? "primary" : "secondary"),
+                        padding: "5px 12px", fontSize: 13,
+                      }}>
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+                {!FM[settings.format]?.hasGK && (
+                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6 }}>
+                    Ej målvakt — alla spelare är utespelare
+                  </div>
+                )}
+              </div>
+
               {[
                 ["periods",  "Perioder",      1, 6],
                 ["duration", "Min / period",  5, 30],
@@ -373,6 +442,13 @@ export default function App() {
               fontSize: 17, fontFamily: "'Bebas Neue', cursive", letterSpacing: 3,
             }}>
               GENERERA MATCHPLAN →
+            </button>
+
+            {/* Share button */}
+            <button onClick={copyLink} style={{
+              ...S.btn("secondary"), width: "100%", marginTop: 8, padding: "11px 0", fontSize: 13,
+            }}>
+              {copied ? "✓ Länk kopierad!" : "🔗 Dela länk"}
             </button>
           </div>
         )}
@@ -411,7 +487,10 @@ export default function App() {
                 ↻ Generera om
               </button>
               <button onClick={() => setTab("players")} style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13 }}>
-                ✎ Redigera spelare
+                ✎ Redigera
+              </button>
+              <button onClick={copyLink} style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13 }}>
+                {copied ? "✓ Kopierad!" : "🔗 Dela"}
               </button>
             </div>
 
@@ -430,7 +509,7 @@ export default function App() {
                     Period {i + 1}
                   </div>
                   <div style={{ fontSize: 12, color: "#4ade80", opacity: 0.7 }}>
-                    {settings.duration} min
+                    {settings.format} &nbsp;·&nbsp; {settings.duration} min
                   </div>
                 </div>
 
@@ -440,7 +519,6 @@ export default function App() {
                   padding: "16px 12px",
                   position: "relative",
                 }}>
-                  {/* Subtle pitch lines */}
                   <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(180deg, transparent 0px, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px)", pointerEvents: "none" }} />
 
                   {/* Attack zone */}
@@ -448,7 +526,7 @@ export default function App() {
                     <div style={{ fontSize: 9, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 10, fontWeight: 600 }}>
                       ⚡ Anfallszon
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-around" }}>
+                    <div style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 6 }}>
                       {period.att.map((id, j) => <PositionSlot key={j} id={id} label={`Anfall ${j + 1}`} />)}
                     </div>
                   </div>
@@ -463,9 +541,21 @@ export default function App() {
                     }}>○</div>
                   </div>
 
+                  {/* Midfield zone — only for formats with midfielders */}
+                  {fmt.mid > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 9, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 10, fontWeight: 600 }}>
+                        ⚖ Mittfält
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 6 }}>
+                        {(period.mid ?? []).map((id, j) => <PositionSlot key={j} id={id} label={`Mitt ${j + 1}`} />)}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Defense zone */}
                   <div style={{ marginBottom: 4 }}>
-                    <div style={{ display: "flex", justifyContent: "space-around" }}>
+                    <div style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 6 }}>
                       {period.def.map((id, j) => <PositionSlot key={j} id={id} label={`Försvar ${j + 1}`} />)}
                     </div>
                     <div style={{ fontSize: 9, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 10, fontWeight: 600 }}>
@@ -473,13 +563,15 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* GK separator */}
-                  <div style={{ border: "none", borderTop: "2px solid #1a5c33", margin: "12px 0" }} />
-
-                  {/* GK */}
-                  <div style={{ display: "flex", justifyContent: "center" }}>
-                    <PositionSlot id={period.gk} label="Målvakt" />
-                  </div>
+                  {/* GK — only for formats with goalkeeper */}
+                  {fmt.hasGK && (
+                    <>
+                      <div style={{ border: "none", borderTop: "2px solid #1a5c33", margin: "12px 0" }} />
+                      <div style={{ display: "flex", justifyContent: "center" }}>
+                        <PositionSlot id={period.gk} label="Målvakt" />
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Sub-in row */}
