@@ -24,14 +24,15 @@ const FM = Object.fromEntries(FORMATS.map(f => [f.key, f]));
 const mkP = (name, isGK = false, pref = "neutral") => ({ id: uid(), name, isGK, pref });
 
 const DEMO = [
-  mkP("Erik",   false, "attack"),
-  mkP("Maja",   false, "defense"),
-  mkP("Oliver", true,  "neutral"),
-  mkP("Lova",   false, "attack"),
-  mkP("Hugo",   true,  "neutral"),
-  mkP("Wilma",  false, "defense"),
-  mkP("Axel",   false, "neutral"),
-  mkP("Nora",   true,  "neutral"),
+  mkP("Spelare 1", true,  "neutral"),
+  mkP("Spelare 2", false, "attack"),
+  mkP("Spelare 3", false, "defense"),
+  mkP("Spelare 4", false, "attack"),
+  mkP("Spelare 5", false, "neutral"),
+  mkP("Spelare 6", false, "defense"),
+  mkP("Spelare 7", false, "attack"),
+  mkP("Spelare 8", false, "neutral"),
+  mkP("Spelare 9", false, "defense"),
 ];
 
 /* ─── URL state ─── */
