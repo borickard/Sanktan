@@ -50,7 +50,7 @@ const initFromURL = (() => {
 function generatePlan(players, settings) {
   const { periods, duration, subs } = settings;
   const fmt = FM[settings.format] ?? FM["5v5"];
-  const FULL = duration, HALF = duration / 2;
+  const FULL = duration, SEG = subs > 0 ? duration / (subs + 1) : 0;
   const fieldCount = fmt.att + fmt.mid + fmt.def;
 
   const gks = fmt.hasGK ? players.filter(p => p.isGK) : [];
@@ -91,7 +91,7 @@ function generatePlan(players, settings) {
 
     if (gkId) mins[gkId] += FULL;
     starters.forEach(p => { mins[p.id] += FULL; });
-    if (subIn) mins[subIn.id] += HALF;
+    if (subIn) mins[subIn.id] += SEG;
 
     const usedIds = new Set([gkId, ...starters.map(p => p.id), subIn?.id].filter(Boolean));
 
@@ -185,14 +185,15 @@ export default function App() {
   /* Minute totals from current plan */
   const calcMins = () => {
     if (!plan) return {};
-    const FULL = settings.duration, HALF = settings.duration / 2;
+    const FULL = settings.duration;
+    const SEG = settings.subs > 0 ? FULL / (settings.subs + 1) : 0;
     const m = Object.fromEntries(players.map(p => [p.id, 0]));
     plan.forEach(({ gk, def, mid, att, subIn }) => {
       if (gk) m[gk] = (m[gk] ?? 0) + FULL;
       def.forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
       (mid ?? []).forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
       att.forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
-      if (subIn) m[subIn] = (m[subIn] ?? 0) + HALF;
+      if (subIn) m[subIn] = (m[subIn] ?? 0) + SEG;
     });
     return m;
   };
@@ -234,14 +235,6 @@ export default function App() {
           : <span style={{ fontSize: 11 }}>{pref.icon}</span>
         }
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-        {!small && plan && (
-          <span style={{
-            fontSize: 10, color: isSelected ? "#713f12" : "#64748b",
-            fontWeight: 400,
-          }}>
-            {mins[id] ?? 0}′
-          </span>
-        )}
       </div>
     );
   };
@@ -587,7 +580,7 @@ export default function App() {
                     </span>
                     <Chip id={period.subIn} small />
                     <span style={{ fontSize: 11, color: "#334155", marginLeft: "auto" }}>
-                      ~{settings.duration / 2} min
+                      ~{Math.round(settings.duration / (settings.subs + 1))} min
                     </span>
                   </div>
                 )}
