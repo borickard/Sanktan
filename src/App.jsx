@@ -47,6 +47,26 @@ const initFromURL = (() => {
 })();
 
 /* ─── Auto-generate algorithm ─── */
+function assignPositions(pool, fmt) {
+  const at = [], md = [], df = [];
+  pool.filter(p => p.pref === "attack").forEach(p  => { if (at.length < fmt.att) at.push(p.id); });
+  pool.filter(p => p.pref === "neutral").forEach(p => { if (md.length < fmt.mid) md.push(p.id); });
+  pool.filter(p => p.pref === "defense").forEach(p => { if (df.length < fmt.def) df.push(p.id); });
+
+  const used = new Set([...at, ...md, ...df]);
+  pool.filter(p => !used.has(p.id)).forEach(p => {
+    if (at.length < fmt.att) at.push(p.id);
+    else if (md.length < fmt.mid) md.push(p.id);
+    else if (df.length < fmt.def) df.push(p.id);
+  });
+
+  while (at.length < fmt.att) at.push(null);
+  while (md.length < fmt.mid) md.push(null);
+  while (df.length < fmt.def) df.push(null);
+
+  return { att: at, mid: md, def: df };
+}
+
 function generatePlan(players, settings) {
   const { periods, duration, subs } = settings;
   const fmt = FM[settings.format] ?? FM["5v5"];
@@ -68,39 +88,50 @@ function generatePlan(players, settings) {
       .filter(p => p.id !== gkId)
       .sort((a, b) => mins[a.id] - mins[b.id]);
 
+    // Full switch: all field players swap at midpoint (requires 2× field slots available)
+    const isFullSwitch = subs >= 1 && avail.length >= fieldCount * 2;
+
     const starters = avail.slice(0, fieldCount);
-    const subIn = (subs >= 1 && avail.length >= fieldCount + 1) ? avail[fieldCount] : null;
+    const firstHalf = assignPositions(starters, fmt);
 
-    const at = [], md = [], df = [];
-    const pool = [...starters];
+    let subAtt = [], subMid = [], subDef = [], subIn = null;
 
-    pool.filter(p => p.pref === "attack").forEach(p  => { if (at.length < fmt.att) at.push(p.id); });
-    pool.filter(p => p.pref === "neutral").forEach(p => { if (md.length < fmt.mid) md.push(p.id); });
-    pool.filter(p => p.pref === "defense").forEach(p => { if (df.length < fmt.def) df.push(p.id); });
-
-    const used = new Set([...at, ...md, ...df]);
-    pool.filter(p => !used.has(p.id)).forEach(p => {
-      if (at.length < fmt.att) at.push(p.id);
-      else if (md.length < fmt.mid) md.push(p.id);
-      else if (df.length < fmt.def) df.push(p.id);
-    });
-
-    while (at.length < fmt.att) at.push(null);
-    while (md.length < fmt.mid) md.push(null);
-    while (df.length < fmt.def) df.push(null);
+    if (isFullSwitch) {
+      const secondGroup = avail.slice(fieldCount, fieldCount * 2);
+      const secondHalf = assignPositions(secondGroup, fmt);
+      subAtt = secondHalf.att;
+      subMid = secondHalf.mid;
+      subDef = secondHalf.def;
+    } else if (subs >= 1 && avail.length >= fieldCount + 1) {
+      subIn = avail[fieldCount].id;
+    }
 
     if (gkId) mins[gkId] += FULL;
-    starters.forEach(p => { mins[p.id] += FULL; });
-    if (subIn) mins[subIn.id] += SEG;
+    if (isFullSwitch) {
+      starters.forEach(p => { mins[p.id] += SEG; });
+      avail.slice(fieldCount, fieldCount * 2).forEach(p => { mins[p.id] += SEG; });
+    } else {
+      starters.forEach(p => { mins[p.id] += FULL; });
+      if (subIn) mins[subIn] += SEG;
+    }
 
-    const usedIds = new Set([gkId, ...starters.map(p => p.id), subIn?.id].filter(Boolean));
+    const usedIds = new Set([
+      gkId,
+      ...starters.map(p => p.id),
+      ...(isFullSwitch
+        ? avail.slice(fieldCount, fieldCount * 2).map(p => p.id)
+        : (subIn ? [subIn] : [])),
+    ].filter(Boolean));
 
     return {
       gk: gkId,
-      def: df,
-      mid: md,
-      att: at,
-      subIn: subIn?.id ?? null,
+      def: firstHalf.def,
+      mid: firstHalf.mid,
+      att: firstHalf.att,
+      subAtt,
+      subMid,
+      subDef,
+      subIn,
       bench: players.filter(p => !usedIds.has(p.id)).map(p => p.id),
     };
   });
@@ -172,12 +203,15 @@ export default function App() {
     const a = sel, b = id;
     const sw = x => x === a ? b : x === b ? a : x;
     setPlan(pl => pl.map(period => ({
-      gk:    sw(period.gk),
-      def:   period.def.map(sw),
-      mid:   (period.mid ?? []).map(sw),
-      att:   period.att.map(sw),
-      subIn: sw(period.subIn),
-      bench: period.bench.map(sw),
+      gk:     sw(period.gk),
+      def:    period.def.map(sw),
+      mid:    (period.mid ?? []).map(sw),
+      att:    period.att.map(sw),
+      subIn:  sw(period.subIn),
+      subAtt: (period.subAtt ?? []).map(sw),
+      subMid: (period.subMid ?? []).map(sw),
+      subDef: (period.subDef ?? []).map(sw),
+      bench:  period.bench.map(sw),
     })));
     setSel(null);
   }, [sel]);
@@ -188,12 +222,20 @@ export default function App() {
     const FULL = settings.duration;
     const SEG = settings.subs > 0 ? FULL / (settings.subs + 1) : 0;
     const m = Object.fromEntries(players.map(p => [p.id, 0]));
-    plan.forEach(({ gk, def, mid, att, subIn }) => {
+    plan.forEach(({ gk, def, mid, att, subIn, subAtt, subMid, subDef }) => {
       if (gk) m[gk] = (m[gk] ?? 0) + FULL;
-      def.forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
-      (mid ?? []).forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
-      att.forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
-      if (subIn) m[subIn] = (m[subIn] ?? 0) + SEG;
+      const isFullSwitch = subAtt && subAtt.length > 0;
+      const fieldTime = isFullSwitch ? SEG : FULL;
+      def.forEach(id => { if (id) m[id] = (m[id] ?? 0) + fieldTime; });
+      (mid ?? []).forEach(id => { if (id) m[id] = (m[id] ?? 0) + fieldTime; });
+      att.forEach(id => { if (id) m[id] = (m[id] ?? 0) + fieldTime; });
+      if (isFullSwitch) {
+        (subAtt ?? []).forEach(id => { if (id) m[id] = (m[id] ?? 0) + SEG; });
+        (subMid ?? []).forEach(id => { if (id) m[id] = (m[id] ?? 0) + SEG; });
+        (subDef ?? []).forEach(id => { if (id) m[id] = (m[id] ?? 0) + SEG; });
+      } else if (subIn) {
+        m[subIn] = (m[subIn] ?? 0) + SEG;
+      }
     });
     return m;
   };
@@ -516,6 +558,13 @@ export default function App() {
                 }}>
                   <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(180deg, transparent 0px, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px)", pointerEvents: "none" }} />
 
+                  {/* Half label — only when full switch is active */}
+                  {period.subAtt?.length > 0 && (
+                    <div style={{ fontSize: 9, color: "#38bdf8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 10, fontWeight: 700 }}>
+                      1:a halvlek
+                    </div>
+                  )}
+
                   {/* Attack zone */}
                   <div style={{ marginBottom: 4 }}>
                     <div style={{ fontSize: 9, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 10, fontWeight: 600 }}>
@@ -569,8 +618,72 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Sub-in row */}
-                {period.subIn && (
+                {/* Full-team switch: halvtidsbyte divider + second half lineup */}
+                {period.subAtt?.length > 0 && (
+                  <>
+                    <div style={{
+                      background: "#06192b", borderTop: "1px solid #1a3d5c", borderBottom: "1px solid #1a3d5c",
+                      padding: "7px 14px", display: "flex", alignItems: "center", justifyContent: "space-between",
+                    }}>
+                      <span style={{ fontSize: 11, color: "#38bdf8", textTransform: "uppercase", letterSpacing: 1, fontWeight: 700 }}>
+                        ↕ Halvtidsbyte
+                      </span>
+                      <span style={{ fontSize: 11, color: "#475569" }}>
+                        ~{Math.round(settings.duration / (settings.subs + 1))} min
+                      </span>
+                    </div>
+
+                    <div style={{
+                      background: "linear-gradient(180deg, #0a1f12 0%, #0d2818 50%, #0a1f12 100%)",
+                      padding: "16px 12px", position: "relative",
+                    }}>
+                      <div style={{ fontSize: 9, color: "#38bdf8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 10, fontWeight: 700 }}>
+                        2:a halvlek
+                      </div>
+
+                      <div style={{ marginBottom: 4 }}>
+                        <div style={{ fontSize: 9, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 10, fontWeight: 600 }}>
+                          ⚡ Anfallszon
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
+                          {period.subAtt.map((id, j) => <PositionSlot key={j} id={id} label={`Anfall ${j + 1}`} />)}
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: "center", margin: "12px 0", position: "relative" }}>
+                        <div style={{ borderTop: "1px dashed #1a5c33", position: "absolute", top: "50%", left: 0, right: 0 }} />
+                        <div style={{
+                          display: "inline-block", width: 20, height: 20, borderRadius: "50%",
+                          border: "1px dashed #1a5c33", background: "#0d2818",
+                          position: "relative", lineHeight: "18px", fontSize: 8, color: "#1a5c33",
+                        }}>○</div>
+                      </div>
+
+                      {fmt.mid > 0 && (
+                        <div style={{ marginBottom: 16 }}>
+                          <div style={{ fontSize: 9, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 10, fontWeight: 600 }}>
+                            ⚖ Mittfält
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
+                            {(period.subMid ?? []).map((id, j) => <PositionSlot key={j} id={id} label={`Mitt ${j + 1}`} />)}
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ marginBottom: 4 }}>
+                        <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
+                          {period.subDef.map((id, j) => <PositionSlot key={j} id={id} label={`Försvar ${j + 1}`} />)}
+                        </div>
+                        <div style={{ fontSize: 9, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 10, fontWeight: 600 }}>
+                          🛡 Försvarszon
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Fallback single sub-in row (for old plans or when full switch isn't possible) */}
+                {!period.subAtt?.length && period.subIn && (
                   <div style={{
                     background: "#0d1f12", borderTop: "1px solid #1a3d1f",
                     padding: "8px 14px", display: "flex", alignItems: "center", gap: 10,
