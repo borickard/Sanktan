@@ -21,7 +21,7 @@ const FORMATS = [
 ];
 const FM = Object.fromEntries(FORMATS.map(f => [f.key, f]));
 
-const mkP = (name, isGK = false, pref = "neutral") => ({ id: uid(), name, isGK, pref });
+const mkP = (name, isGK = false, pref = "neutral") => ({ id: uid(), name, isGK, pref, enabled: true });
 
 const DEMO = [
   mkP("Spelare 1", true,  "neutral"),
@@ -115,8 +115,9 @@ export default function App() {
     periods: 3, duration: 15, subs: 1, format: "5v5",
     ...(initFromURL?.settings ?? {}),
   });
-  const [plan, setPlan]     = useState(initFromURL?.plan ?? null);
-  const [sel, setSel]       = useState(null);
+  const [plan, setPlan]         = useState(initFromURL?.plan ?? null);
+  const [originalPlan, setOriginalPlan] = useState(initFromURL?.plan ?? null);
+  const [sel, setSel]           = useState(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -149,13 +150,21 @@ export default function App() {
 
   const delP = id => setPlayers(ps => ps.filter(p => p.id !== id));
 
+  const activePlayers = players.filter(p => p.enabled !== false);
+
   const doGenerate = () => {
-    if (players.length < fmt.total) {
-      return alert(`Lägg till minst ${fmt.total} spelare för ${fmt.label}!`);
+    if (activePlayers.length < fmt.total) {
+      return alert(`Aktivera minst ${fmt.total} spelare för ${fmt.label}!`);
     }
-    setPlan(generatePlan(players, settings));
+    const newPlan = generatePlan(activePlayers, settings);
+    setPlan(newPlan);
+    setOriginalPlan(newPlan);
     setTab("plan");
     setSel(null);
+  };
+
+  const doReset = () => {
+    if (originalPlan) { setPlan(originalPlan); setSel(null); }
   };
 
   const copyLink = () => {
@@ -284,7 +293,7 @@ export default function App() {
           Laguppställning {settings.format}
         </div>
         <div style={{ fontSize: 11, color: "#475569", marginTop: 4, lineHeight: 1.6 }}>
-          {players.length} sp &nbsp;·&nbsp; {settings.periods} per &nbsp;·&nbsp; {settings.duration} min &nbsp;·&nbsp; {settings.subs} byte
+          {activePlayers.length}/{players.length} sp &nbsp;·&nbsp; {settings.periods} per &nbsp;·&nbsp; {settings.duration} min &nbsp;·&nbsp; {settings.subs} byte
         </div>
       </div>
 
@@ -308,8 +317,17 @@ export default function App() {
             </div>
 
             {players.map(p => (
-              <div key={p.id} style={{ ...S.card, padding: "10px 12px", display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: p.isGK ? "#fbbf24" : PM[p.pref].color, flexShrink: 0 }} />
+              <div key={p.id} style={{ ...S.card, padding: "10px 12px", display: "flex", alignItems: "center", gap: 6, opacity: p.enabled !== false ? 1 : 0.42, transition: "opacity 0.15s" }}>
+                <button
+                  onClick={() => updP(p.id, "enabled", p.enabled === false)}
+                  title={p.enabled !== false ? "Avaktivera (ej med idag)" : "Aktivera"}
+                  style={{
+                    width: 12, height: 12, borderRadius: "50%", padding: 0, flexShrink: 0, cursor: "pointer",
+                    background: p.enabled !== false ? (p.isGK ? "#fbbf24" : PM[p.pref].color) : "transparent",
+                    border: `2px solid ${p.enabled !== false ? (p.isGK ? "#fbbf24" : PM[p.pref].color) : "#475569"}`,
+                    transition: "all 0.15s",
+                  }}
+                />
 
                 <input
                   value={p.name}
@@ -344,6 +362,63 @@ export default function App() {
                 </button>
               </div>
             ))}
+
+            {/* Position proposal */}
+            {(() => {
+              const gks = fmt.hasGK ? activePlayers.filter(p => p.isGK) : [];
+              const field = activePlayers.filter(p => !(fmt.hasGK && p.isGK));
+              const byPref = {
+                attack:  field.filter(p => p.pref === "attack"),
+                neutral: field.filter(p => p.pref === "neutral"),
+                defense: field.filter(p => p.pref === "defense"),
+              };
+              const rows = [
+                { pref: "attack",  label: "Anfall",   slots: fmt.att },
+                ...(fmt.mid > 0 ? [{ pref: "neutral", label: "Mittfält", slots: fmt.mid }] : []),
+                { pref: "defense", label: "Försvar",  slots: fmt.def },
+              ];
+              return (
+                <div style={{ ...S.card, padding: "12px 14px", marginTop: 4, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
+                    Föreslagen rollfördelning &nbsp;·&nbsp; {activePlayers.length} aktiva
+                  </div>
+                  {fmt.hasGK && (
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 7 }}>
+                      <span style={{ fontSize: 10, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700, flexShrink: 0 }}>MV</span>
+                      <span style={{ fontSize: 10, color: "#334155", minWidth: 55, flexShrink: 0 }}>1 plats</span>
+                      <span style={{ fontSize: 12, color: gks.length > 0 ? "#cbd5e1" : "#475569" }}>
+                        {gks.length > 0 ? gks.map(p => p.name).join(", ") : "Ingen utsedd målvakt"}
+                      </span>
+                    </div>
+                  )}
+                  {rows.map(({ pref, label, slots }) => {
+                    const pr = PM[pref];
+                    const matched = byPref[pref];
+                    const extra = matched.length - slots;
+                    return (
+                      <div key={pref} style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, color: pr.color, fontWeight: 600, minWidth: 70, flexShrink: 0 }}>
+                          {pr.icon} {label}
+                        </span>
+                        <span style={{ fontSize: 10, color: "#334155", minWidth: 55, flexShrink: 0 }}>
+                          {slots} plats{slots !== 1 ? "er" : ""}
+                        </span>
+                        <span style={{ fontSize: 12, color: matched.length > 0 ? "#cbd5e1" : "#334155", flex: 1, minWidth: 0 }}>
+                          {matched.length > 0 ? matched.map(p => p.name).join(", ") : "—"}
+                          {extra > 0 && <span style={{ color: "#f87171", fontSize: 10 }}> +{extra} extra</span>}
+                          {extra < 0 && <span style={{ color: "#fbbf24", fontSize: 10 }}> {Math.abs(extra)} fylls</span>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {settings.subs >= 1 && (
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #1e3a5f", fontSize: 11, color: "#475569" }}>
+                      ↕ {settings.subs} byte per period — spelarna roterar in halvvägs
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Add player */}
             <div style={{ display: "flex", gap: 8, marginTop: 4, marginBottom: 16 }}>
@@ -481,6 +556,13 @@ export default function App() {
               <button onClick={doGenerate} style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13 }}>
                 ↻ Generera om
               </button>
+              <button
+                onClick={doReset}
+                disabled={!originalPlan}
+                title="Återställ till den automatiskt genererade fördelningen"
+                style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13, opacity: originalPlan ? 1 : 0.4 }}>
+                ⟳ Återställ
+              </button>
               <button onClick={() => setTab("players")} style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13 }}>
                 ✎ Redigera
               </button>
@@ -610,7 +692,7 @@ export default function App() {
               }}>
                 Speltid — {totalPossible} min totalt
               </div>
-              {[...players]
+              {[...activePlayers]
                 .sort((a, b) => (mins[b.id] ?? 0) - (mins[a.id] ?? 0))
                 .map(p => {
                   const m = mins[p.id] ?? 0;
