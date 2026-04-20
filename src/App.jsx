@@ -257,22 +257,25 @@ export default function App() {
   );
 
   /* Global schedule swap of two players */
-  const tapPlayer = useCallback(id => {
+  const tapPlayer = useCallback((id, periodIdx) => {
     if (!id) return;
-    if (!sel) { setSel(id); return; }
-    if (sel === id) { setSel(null); return; }
-    const a = sel, b = id;
+    if (!sel) { setSel({ id, periodIdx }); return; }
+    if (sel.id === id) { setSel(null); return; }
+    const a = sel.id, b = id;
     const sw = x => x === a ? b : x === b ? a : x;
-    setPlan(pl => pl.map(period => ({
-      gk:    sw(period.gk),
-      att:   period.att.map(sw),
-      mid:   (period.mid ?? []).map(sw),
-      def:   period.def.map(sw),
-      att2:  (period.att2 ?? []).map(sw),
-      mid2:  (period.mid2 ?? []).map(sw),
-      def2:  (period.def2 ?? []).map(sw),
-      bench: period.bench.map(sw),
-    })));
+    setPlan(pl => pl.map((period, i) => {
+      if (i !== sel.periodIdx) return period;
+      return {
+        gk:    sw(period.gk),
+        att:   period.att.map(sw),
+        mid:   (period.mid ?? []).map(sw),
+        def:   period.def.map(sw),
+        att2:  (period.att2 ?? []).map(sw),
+        mid2:  (period.mid2 ?? []).map(sw),
+        def2:  (period.def2 ?? []).map(sw),
+        bench: period.bench.map(sw),
+      };
+    }));
     setSel(null);
   }, [sel]);
 
@@ -317,17 +320,17 @@ export default function App() {
   const totalPossible = settings.periods * settings.duration;
 
   /* ─── Sub-components ─── */
-  const Chip = ({ id, small = false, inGKSlot = false }) => {
+  const Chip = ({ id, small = false, inGKSlot = false, periodIdx }) => {
     if (!id) return null;
     const p = getP(id);
     if (!p) return null;
-    const isSelected = sel === id;
-    const isSel2nd = sel && sel !== id;
+    const isSelected = sel?.id === id;
+    const isSel2nd = sel && sel.id !== id;
     const activeGK = p.isGK && inGKSlot;
 
     return (
       <div
-        onClick={e => { e.stopPropagation(); tapPlayer(id); }}
+        onClick={e => { e.stopPropagation(); tapPlayer(id, periodIdx); }}
         style={{
           display: "inline-flex", alignItems: "center", gap: 4,
           maxWidth: "100%", overflow: "hidden",
@@ -362,7 +365,7 @@ export default function App() {
     </div>
   );
 
-  const PitchHalf = ({ att, mid, def, gk, showGK }) => (
+  const PitchHalf = ({ att, mid, def, gk, showGK, periodIdx }) => (
     <div style={{
       background: "linear-gradient(180deg, #0a1f12 0%, #0d2818 50%, #0a1f12 100%)",
       padding: "12px 12px 10px", position: "relative",
@@ -371,7 +374,7 @@ export default function App() {
       <div style={{ marginBottom: 4 }}>
         <div style={{ fontSize: 9, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Zap size={9} /> Anfallszon</div>
         <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-          {att.map((id, j) => <PositionSlot key={j} id={id} label={`Anfall ${j + 1}`} />)}
+          {att.map((id, j) => <PositionSlot key={j} id={id} label={`Anfall ${j + 1}`} periodIdx={periodIdx} />)}
         </div>
       </div>
       <div style={{ textAlign: "center", margin: "10px 0", position: "relative" }}>
@@ -382,13 +385,13 @@ export default function App() {
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 9, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Layers size={9} /> Mittfält</div>
           <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-            {(mid ?? []).map((id, j) => <PositionSlot key={j} id={id} label={`Mitt ${j + 1}`} />)}
+            {(mid ?? []).map((id, j) => <PositionSlot key={j} id={id} label={`Mitt ${j + 1}`} periodIdx={periodIdx} />)}
           </div>
         </div>
       )}
       <div style={{ marginBottom: 4 }}>
         <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-          {def.map((id, j) => <PositionSlot key={j} id={id} label={`Försvar ${j + 1}`} />)}
+          {def.map((id, j) => <PositionSlot key={j} id={id} label={`Försvar ${j + 1}`} periodIdx={periodIdx} />)}
         </div>
         <div style={{ fontSize: 9, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={9} /> Försvarszon</div>
       </div>
@@ -396,20 +399,20 @@ export default function App() {
         <>
           <div style={{ borderTop: "2px solid #1a5c33", margin: "10px 0" }} />
           <div style={{ display: "flex", justifyContent: "center" }}>
-            <PositionSlot id={gk} label="Målvakt" />
+            <PositionSlot id={gk} label="Målvakt" periodIdx={periodIdx} />
           </div>
         </>
       )}
     </div>
   );
 
-  const PositionSlot = ({ id, label }) => (
+  const PositionSlot = ({ id, label, periodIdx }) => (
     <div style={{ textAlign: "center", flex: "1 1 0", minWidth: 0, maxWidth: 120 }}>
       <div style={{ fontSize: 9, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5, fontWeight: 600 }}>
         {label}
       </div>
       {id
-        ? <Chip id={id} inGKSlot={label === "Målvakt"} />
+        ? <Chip id={id} inGKSlot={label === "Målvakt"} periodIdx={periodIdx} />
         : <div style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 8px", fontSize: 12, color: "#334155" }}>—</div>
       }
     </div>
@@ -726,8 +729,8 @@ export default function App() {
               transition: "all 0.2s",
             }}>
               {sel
-                ? <>Byter schema för <strong>{getP(sel)?.name}</strong> — tryck på en annan spelare, eller tryck igen för att avmarkera.</>
-                : "Tryck på en spelare för att välja, sedan på en annan för att byta deras schema."
+                ? <>Markerat <strong>{getP(sel.id)?.name}</strong> i period {sel.periodIdx + 1} — tryck på en annan spelare i samma period för att byta.</>
+                : "Tryck på en spelare för att välja, sedan på en annan i samma period för att byta."
               }
             </div>
 
@@ -889,7 +892,7 @@ export default function App() {
                       <div style={{ display: "flex" }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <HalfLabel text={`1. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                          <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK />
+                          <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i} />
                         </div>
                         <div style={{
                           display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
@@ -901,14 +904,14 @@ export default function App() {
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                          <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK />
+                          <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK periodIdx={i} />
                         </div>
                       </div>
                     ) : period.att2 != null ? (
                       /* Stacked layout (mobile or periods 2+) */
                       <>
                         <HalfLabel text={`1. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                        <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK />
+                        <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i} />
                         <div style={{
                           background: "#061812", borderTop: "1px dashed #1a5c33", borderBottom: "1px dashed #1a5c33",
                           padding: "7px 14px", display: "flex", justifyContent: "center", alignItems: "center", gap: 10,
@@ -917,10 +920,10 @@ export default function App() {
                           {fmt.hasGK && <span style={{ fontSize: 10, color: "#475569" }}>MV stannar · alla utespelare byts</span>}
                         </div>
                         <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                        <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK />
+                        <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK periodIdx={i} />
                       </>
                     ) : (
-                      <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK />
+                      <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i} />
                     )}
 
                     {/* Bench row */}
@@ -930,7 +933,7 @@ export default function App() {
                           Hel period på bänken
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                          {period.bench.map(id => <Chip key={id} id={id} small />)}
+                          {period.bench.map(id => <Chip key={id} id={id} small periodIdx={i} />)}
                         </div>
                       </div>
                     )}
