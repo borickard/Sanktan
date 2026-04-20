@@ -770,7 +770,7 @@ export default function App() {
               const reset  = () => { setTimerElapsed(0); setTimerRunning(false); };
 
               return (
-                <div style={{ ...S.card, padding: "16px", marginBottom: 16 }}>
+                <div style={{ ...S.card, padding: "16px", marginBottom: 16, position: "sticky", top: 0, zIndex: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 15, letterSpacing: 2, color: "#475569" }}>TIMER</div>
                     <div style={{ fontSize: 12, color: "#475569" }}>Period {clampedPeriod + 1} / {plan.length}</div>
