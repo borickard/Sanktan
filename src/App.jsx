@@ -50,11 +50,28 @@ const initFromURL = (() => {
 function generatePlan(players, settings) {
   const { periods, duration, subs } = settings;
   const fmt = FM[settings.format] ?? FM["5v5"];
-  const FULL = duration, SEG = subs > 0 ? duration / (subs + 1) : 0;
+  const FULL = duration;
   const fieldCount = fmt.att + fmt.mid + fmt.def;
 
   const gks = fmt.hasGK ? players.filter(p => p.isGK) : [];
   const mins = Object.fromEntries(players.map(p => [p.id, 0]));
+
+  const fillPositions = pool => {
+    const at = [], md = [], df = [];
+    pool.filter(p => p.pref === "attack").forEach(p  => { if (at.length < fmt.att) at.push(p.id); });
+    pool.filter(p => p.pref === "neutral").forEach(p => { if (md.length < fmt.mid) md.push(p.id); });
+    pool.filter(p => p.pref === "defense").forEach(p => { if (df.length < fmt.def) df.push(p.id); });
+    const used = new Set([...at, ...md, ...df]);
+    pool.filter(p => !used.has(p.id)).forEach(p => {
+      if      (at.length < fmt.att) at.push(p.id);
+      else if (md.length < fmt.mid) md.push(p.id);
+      else if (df.length < fmt.def) df.push(p.id);
+    });
+    while (at.length < fmt.att) at.push(null);
+    while (md.length < fmt.mid) md.push(null);
+    while (df.length < fmt.def) df.push(null);
+    return { at, md, df };
+  };
 
   return Array.from({ length: periods }, (_, i) => {
     let gkId = null;
@@ -68,41 +85,45 @@ function generatePlan(players, settings) {
       .filter(p => p.id !== gkId)
       .sort((a, b) => mins[a.id] - mins[b.id]);
 
-    const starters = avail.slice(0, fieldCount);
-    const subIn = (subs >= 1 && avail.length >= fieldCount + 1) ? avail[fieldCount] : null;
+    if (subs >= 1) {
+      /* Full half-time rotation: pick up to 2×fieldCount players */
+      const HALF = FULL / 2;
+      const take = Math.min(fieldCount * 2, avail.length);
+      const selected  = avail.slice(0, take);
+      const firstHalf  = selected.slice(0, fieldCount);
+      const secondHalf = selected.slice(fieldCount);
+      const bench = avail.slice(take);
 
-    const at = [], md = [], df = [];
-    const pool = [...starters];
+      const pos1 = fillPositions(firstHalf);
+      const pos2 = fillPositions(secondHalf);
 
-    pool.filter(p => p.pref === "attack").forEach(p  => { if (at.length < fmt.att) at.push(p.id); });
-    pool.filter(p => p.pref === "neutral").forEach(p => { if (md.length < fmt.mid) md.push(p.id); });
-    pool.filter(p => p.pref === "defense").forEach(p => { if (df.length < fmt.def) df.push(p.id); });
+      if (gkId) mins[gkId] += FULL;
+      firstHalf.forEach(p  => { mins[p.id] += HALF; });
+      secondHalf.forEach(p => { mins[p.id] += HALF; });
 
-    const used = new Set([...at, ...md, ...df]);
-    pool.filter(p => !used.has(p.id)).forEach(p => {
-      if (at.length < fmt.att) at.push(p.id);
-      else if (md.length < fmt.mid) md.push(p.id);
-      else if (df.length < fmt.def) df.push(p.id);
-    });
+      const usedIds = new Set([gkId, ...selected.map(p => p.id)].filter(Boolean));
+      return {
+        gk: gkId,
+        att: pos1.at, mid: pos1.md, def: pos1.df,
+        att2: pos2.at, mid2: pos2.md, def2: pos2.df,
+        bench: bench.map(p => p.id),
+      };
+    } else {
+      /* No subs: single formation, full time */
+      const starters = avail.slice(0, fieldCount);
+      const pos = fillPositions(starters);
 
-    while (at.length < fmt.att) at.push(null);
-    while (md.length < fmt.mid) md.push(null);
-    while (df.length < fmt.def) df.push(null);
+      if (gkId) mins[gkId] += FULL;
+      starters.forEach(p => { mins[p.id] += FULL; });
 
-    if (gkId) mins[gkId] += FULL;
-    starters.forEach(p => { mins[p.id] += FULL; });
-    if (subIn) mins[subIn.id] += SEG;
-
-    const usedIds = new Set([gkId, ...starters.map(p => p.id), subIn?.id].filter(Boolean));
-
-    return {
-      gk: gkId,
-      def: df,
-      mid: md,
-      att: at,
-      subIn: subIn?.id ?? null,
-      bench: players.filter(p => !usedIds.has(p.id)).map(p => p.id),
-    };
+      const usedIds = new Set([gkId, ...starters.map(p => p.id)].filter(Boolean));
+      return {
+        gk: gkId,
+        att: pos.at, mid: pos.md, def: pos.df,
+        att2: null, mid2: null, def2: null,
+        bench: players.filter(p => !usedIds.has(p.id)).map(p => p.id),
+      };
+    }
   });
 }
 
@@ -182,10 +203,12 @@ export default function App() {
     const sw = x => x === a ? b : x === b ? a : x;
     setPlan(pl => pl.map(period => ({
       gk:    sw(period.gk),
-      def:   period.def.map(sw),
-      mid:   (period.mid ?? []).map(sw),
       att:   period.att.map(sw),
-      subIn: sw(period.subIn),
+      mid:   (period.mid ?? []).map(sw),
+      def:   period.def.map(sw),
+      att2:  (period.att2 ?? []).map(sw),
+      mid2:  (period.mid2 ?? []).map(sw),
+      def2:  (period.def2 ?? []).map(sw),
       bench: period.bench.map(sw),
     })));
     setSel(null);
@@ -195,14 +218,19 @@ export default function App() {
   const calcMins = () => {
     if (!plan) return {};
     const FULL = settings.duration;
-    const SEG = settings.subs > 0 ? FULL / (settings.subs + 1) : 0;
+    const HALF = FULL / 2;
     const m = Object.fromEntries(players.map(p => [p.id, 0]));
-    plan.forEach(({ gk, def, mid, att, subIn }) => {
+    plan.forEach(({ gk, att, mid, def, att2, mid2, def2 }) => {
       if (gk) m[gk] = (m[gk] ?? 0) + FULL;
-      def.forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
-      (mid ?? []).forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
-      att.forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
-      if (subIn) m[subIn] = (m[subIn] ?? 0) + SEG;
+      if (att2 != null) {
+        /* Two-half rotation: each half gets FULL/2 */
+        [...att, ...(mid ?? []), ...def].forEach(id => { if (id) m[id] = (m[id] ?? 0) + HALF; });
+        [...(att2 ?? []), ...(mid2 ?? []), ...(def2 ?? [])].forEach(id => { if (id) m[id] = (m[id] ?? 0) + HALF; });
+      } else {
+        att.forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
+        (mid ?? []).forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
+        def.forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
+      }
     });
     return m;
   };
@@ -210,14 +238,13 @@ export default function App() {
   const calcPositionStats = () => {
     if (!plan) return {};
     const stats = Object.fromEntries(
-      activePlayers.map(p => [p.id, { gk: 0, att: 0, mid: 0, def: 0, sub: 0, bench: 0 }])
+      activePlayers.map(p => [p.id, { gk: 0, att: 0, mid: 0, def: 0, bench: 0 }])
     );
-    plan.forEach(({ gk, att, mid, def, subIn, bench }) => {
-      if (gk && stats[gk])         stats[gk].gk++;
-      att.forEach(id  => { if (id && stats[id]) stats[id].att++; });
-      (mid ?? []).forEach(id => { if (id && stats[id]) stats[id].mid++; });
-      def.forEach(id  => { if (id && stats[id]) stats[id].def++; });
-      if (subIn && stats[subIn])   stats[subIn].sub++;
+    plan.forEach(({ gk, att, mid, def, att2, mid2, def2, bench }) => {
+      if (gk && stats[gk]) stats[gk].gk++;
+      [...att, ...(att2 ?? [])].forEach(id => { if (id && stats[id]) stats[id].att++; });
+      [...(mid ?? []), ...(mid2 ?? [])].forEach(id => { if (id && stats[id]) stats[id].mid++; });
+      [...def, ...(def2 ?? [])].forEach(id => { if (id && stats[id]) stats[id].def++; });
       bench.forEach(id => { if (id && stats[id]) stats[id].bench++; });
     });
     return stats;
@@ -264,6 +291,53 @@ export default function App() {
       </div>
     );
   };
+
+  const HalfLabel = ({ text }) => (
+    <div style={{ fontSize: 9, color: "#4ade80", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 700, opacity: 0.75 }}>
+      {text}
+    </div>
+  );
+
+  const PitchHalf = ({ att, mid, def, gk, showGK }) => (
+    <div style={{
+      background: "linear-gradient(180deg, #0a1f12 0%, #0d2818 50%, #0a1f12 100%)",
+      padding: "12px 12px 10px", position: "relative",
+    }}>
+      <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(180deg, transparent 0px, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px)", pointerEvents: "none" }} />
+      <div style={{ marginBottom: 4 }}>
+        <div style={{ fontSize: 9, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600 }}>⚡ Anfallszon</div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
+          {att.map((id, j) => <PositionSlot key={j} id={id} label={`Anfall ${j + 1}`} />)}
+        </div>
+      </div>
+      <div style={{ textAlign: "center", margin: "10px 0", position: "relative" }}>
+        <div style={{ borderTop: "1px dashed #1a5c33", position: "absolute", top: "50%", left: 0, right: 0 }} />
+        <div style={{ display: "inline-block", width: 18, height: 18, borderRadius: "50%", border: "1px dashed #1a5c33", background: "#0d2818", position: "relative", lineHeight: "16px", fontSize: 8, color: "#1a5c33" }}>○</div>
+      </div>
+      {fmt.mid > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 9, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600 }}>⚖ Mittfält</div>
+          <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
+            {(mid ?? []).map((id, j) => <PositionSlot key={j} id={id} label={`Mitt ${j + 1}`} />)}
+          </div>
+        </div>
+      )}
+      <div style={{ marginBottom: 4 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
+          {def.map((id, j) => <PositionSlot key={j} id={id} label={`Försvar ${j + 1}`} />)}
+        </div>
+        <div style={{ fontSize: 9, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 8, fontWeight: 600 }}>🛡 Försvarszon</div>
+      </div>
+      {showGK && fmt.hasGK && (
+        <>
+          <div style={{ borderTop: "2px solid #1a5c33", margin: "10px 0" }} />
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <PositionSlot id={gk} label="Målvakt" />
+          </div>
+        </>
+      )}
+    </div>
+  );
 
   const PositionSlot = ({ id, label }) => (
     <div style={{ textAlign: "center", flex: "1 1 0", minWidth: 0, maxWidth: 120 }}>
@@ -607,81 +681,29 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Pitch */}
-                <div style={{
-                  background: "linear-gradient(180deg, #0a1f12 0%, #0d2818 50%, #0a1f12 100%)",
-                  padding: "16px 12px",
-                  position: "relative",
-                }}>
-                  <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(180deg, transparent 0px, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px)", pointerEvents: "none" }} />
-
-                  {/* Attack zone */}
-                  <div style={{ marginBottom: 4 }}>
-                    <div style={{ fontSize: 9, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 10, fontWeight: 600 }}>
-                      ⚡ Anfallszon
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-                      {period.att.map((id, j) => <PositionSlot key={j} id={id} label={`Anfall ${j + 1}`} />)}
-                    </div>
-                  </div>
-
-                  {/* Center circle indicator */}
-                  <div style={{ textAlign: "center", margin: "12px 0", position: "relative" }}>
-                    <div style={{ borderTop: "1px dashed #1a5c33", position: "absolute", top: "50%", left: 0, right: 0 }} />
+                {/* Pitch — one or two halves */}
+                {period.att2 != null ? (
+                  <>
+                    <HalfLabel text={`1. Halvlek · ${Math.round(settings.duration / 2)} min`} />
+                    <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK />
                     <div style={{
-                      display: "inline-block", width: 20, height: 20, borderRadius: "50%",
-                      border: "1px dashed #1a5c33", background: "#0d2818",
-                      position: "relative", lineHeight: "18px", fontSize: 8, color: "#1a5c33",
-                    }}>○</div>
-                  </div>
-
-                  {/* Midfield zone — only for formats with midfielders */}
-                  {fmt.mid > 0 && (
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{ fontSize: 9, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 10, fontWeight: 600 }}>
-                        ⚖ Mittfält
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-                        {(period.mid ?? []).map((id, j) => <PositionSlot key={j} id={id} label={`Mitt ${j + 1}`} />)}
-                      </div>
+                      background: "#061812", borderTop: "1px dashed #1a5c33", borderBottom: "1px dashed #1a5c33",
+                      padding: "7px 14px", display: "flex", justifyContent: "center", alignItems: "center", gap: 10,
+                    }}>
+                      <span style={{ fontSize: 11, color: "#4ade80", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>
+                        ↕ HALVTID
+                      </span>
+                      {fmt.hasGK && (
+                        <span style={{ fontSize: 10, color: "#475569" }}>
+                          MV stannar · alla utespelare byts
+                        </span>
+                      )}
                     </div>
-                  )}
-
-                  {/* Defense zone */}
-                  <div style={{ marginBottom: 4 }}>
-                    <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-                      {period.def.map((id, j) => <PositionSlot key={j} id={id} label={`Försvar ${j + 1}`} />)}
-                    </div>
-                    <div style={{ fontSize: 9, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 10, fontWeight: 600 }}>
-                      🛡 Försvarszon
-                    </div>
-                  </div>
-
-                  {/* GK — only for formats with goalkeeper */}
-                  {fmt.hasGK && (
-                    <>
-                      <div style={{ border: "none", borderTop: "2px solid #1a5c33", margin: "12px 0" }} />
-                      <div style={{ display: "flex", justifyContent: "center" }}>
-                        <PositionSlot id={period.gk} label="Målvakt" />
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Sub-in row */}
-                {period.subIn && (
-                  <div style={{
-                    background: "#0d1f12", borderTop: "1px solid #1a3d1f",
-                    padding: "8px 14px", display: "flex", alignItems: "center", gap: 10,
-                  }}>
-                    <span style={{ fontSize: 11, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600, flexShrink: 0 }}>
-                      ↕ Byte in:
-                    </span>
-                    <Chip id={period.subIn} small />
-                    <span style={{ fontSize: 11, color: "#334155", marginLeft: "auto" }}>
-                      ~{Math.round(settings.duration / (settings.subs + 1))} min
-                    </span>
-                  </div>
+                    <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
+                    <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK />
+                  </>
+                ) : (
+                  <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK />
                 )}
 
                 {/* Bench row */}
@@ -720,12 +742,11 @@ export default function App() {
 
                   const ps = posStats[p.id] ?? {};
                   const posBadges = [
-                    ps.gk    > 0 && { label: "MV",    count: ps.gk,    bg: "#fbbf2426", color: "#fbbf24" },
-                    ps.att   > 0 && { label: "⚡",    count: ps.att,   bg: "#f9731626", color: "#f97316" },
-                    ps.mid   > 0 && { label: "⚖",    count: ps.mid,   bg: "#94a3b826", color: "#94a3b8" },
-                    ps.def   > 0 && { label: "🛡",    count: ps.def,   bg: "#60a5fa26", color: "#60a5fa" },
-                    ps.sub   > 0 && { label: "↕",     count: ps.sub,   bg: "#4ade8026", color: "#4ade80" },
-                    ps.bench > 0 && { label: "Bänk",  count: ps.bench, bg: "#1e293b",   color: "#475569" },
+                    ps.gk    > 0 && { label: "MV",   count: ps.gk,    bg: "#fbbf2426", color: "#fbbf24" },
+                    ps.att   > 0 && { label: "⚡",   count: ps.att,   bg: "#f9731626", color: "#f97316" },
+                    ps.mid   > 0 && { label: "⚖",   count: ps.mid,   bg: "#94a3b826", color: "#94a3b8" },
+                    ps.def   > 0 && { label: "🛡",   count: ps.def,   bg: "#60a5fa26", color: "#60a5fa" },
+                    ps.bench > 0 && { label: "Bänk", count: ps.bench, bg: "#1e293b",   color: "#475569" },
                   ].filter(Boolean);
 
                   return (
