@@ -207,7 +207,24 @@ export default function App() {
     return m;
   };
 
+  const calcPositionStats = () => {
+    if (!plan) return {};
+    const stats = Object.fromEntries(
+      activePlayers.map(p => [p.id, { gk: 0, att: 0, mid: 0, def: 0, sub: 0, bench: 0 }])
+    );
+    plan.forEach(({ gk, att, mid, def, subIn, bench }) => {
+      if (gk && stats[gk])         stats[gk].gk++;
+      att.forEach(id  => { if (id && stats[id]) stats[id].att++; });
+      (mid ?? []).forEach(id => { if (id && stats[id]) stats[id].mid++; });
+      def.forEach(id  => { if (id && stats[id]) stats[id].def++; });
+      if (subIn && stats[subIn])   stats[subIn].sub++;
+      bench.forEach(id => { if (id && stats[id]) stats[id].bench++; });
+    });
+    return stats;
+  };
+
   const mins = calcMins();
+  const posStats = calcPositionStats();
   const totalPossible = settings.periods * settings.duration;
 
   /* ─── Sub-components ─── */
@@ -701,8 +718,18 @@ export default function App() {
                   const barColor = p.isGK ? "#fbbf24" : pref.color;
                   const textColor = pct >= 75 ? "#4ade80" : pct >= 45 ? "#fbbf24" : "#f87171";
 
+                  const ps = posStats[p.id] ?? {};
+                  const posBadges = [
+                    ps.gk    > 0 && { label: "MV",    count: ps.gk,    bg: "#fbbf2426", color: "#fbbf24" },
+                    ps.att   > 0 && { label: "⚡",    count: ps.att,   bg: "#f9731626", color: "#f97316" },
+                    ps.mid   > 0 && { label: "⚖",    count: ps.mid,   bg: "#94a3b826", color: "#94a3b8" },
+                    ps.def   > 0 && { label: "🛡",    count: ps.def,   bg: "#60a5fa26", color: "#60a5fa" },
+                    ps.sub   > 0 && { label: "↕",     count: ps.sub,   bg: "#4ade8026", color: "#4ade80" },
+                    ps.bench > 0 && { label: "Bänk",  count: ps.bench, bg: "#1e293b",   color: "#475569" },
+                  ].filter(Boolean);
+
                   return (
-                    <div key={p.id} style={{ marginBottom: 10 }}>
+                    <div key={p.id} style={{ marginBottom: 12 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           {p.isGK
@@ -715,7 +742,17 @@ export default function App() {
                           {m} min
                         </span>
                       </div>
-                      <div style={{ background: "#0f172a", borderRadius: 5, height: 7, overflow: "hidden" }}>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 5 }}>
+                        {posBadges.map(b => (
+                          <span key={b.label} style={{
+                            fontSize: 10, fontWeight: 600, borderRadius: 5,
+                            padding: "2px 6px", background: b.bg, color: b.color,
+                          }}>
+                            {b.label} ×{b.count}
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ background: "#0f172a", borderRadius: 5, height: 6, overflow: "hidden" }}>
                         <div style={{
                           background: `linear-gradient(90deg, ${barColor}99, ${barColor})`,
                           width: `${pct}%`, height: "100%", borderRadius: 5,
