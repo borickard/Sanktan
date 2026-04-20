@@ -785,11 +785,17 @@ export default function App() {
                   </div>
 
                   {/* Progress bar */}
-                  <div style={{ background: "#0f172a", borderRadius: 6, height: 10, marginBottom: 4, position: "relative", overflow: "hidden" }}>
+                  <div
+                    onClick={e => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const pct = (e.clientX - rect.left) / rect.width;
+                      setTimerElapsed(Math.round(Math.max(0, pct) * periodSecs));
+                    }}
+                    style={{ background: "#0f172a", borderRadius: 6, height: 10, marginBottom: 4, position: "relative", overflow: "hidden", cursor: "pointer" }}>
                     {settings.subs >= 1 && (
                       <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 2, background: "#1e3a5f", zIndex: 1 }} />
                     )}
-                    <div style={{ background: barColor, width: `${barPct}%`, height: "100%", borderRadius: 6, transition: "width 0.8s linear, background 0.3s" }} />
+                    <div style={{ background: barColor, width: `${barPct}%`, height: "100%", borderRadius: 6, transition: "width 0.8s linear, background 0.3s", pointerEvents: "none" }} />
                   </div>
                   {settings.subs >= 1 && (
                     <div style={{ fontSize: 9, color: "#334155", textAlign: "center", marginBottom: 10, letterSpacing: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}>
