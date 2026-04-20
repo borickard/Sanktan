@@ -6,9 +6,9 @@ const uid = () => ++_uid;
 
 /* ─── Constants ─── */
 const PREFS = [
-  { key: "attack",  label: "Anfall",  icon: "⚡", color: "#f97316" },
-  { key: "neutral", label: "Neutral", icon: "⚖\uFE0F",  color: "#94a3b8" },
-  { key: "defense", label: "Försvar", icon: "🛡\uFE0F",  color: "#60a5fa" },
+  { key: "attack",  label: "Anfall",     icon: "▲", color: "#f97316" },
+  { key: "neutral", label: "Balanserad", icon: "◆", color: "#94a3b8" },
+  { key: "defense", label: "Försvar",    icon: "▼", color: "#60a5fa" },
 ];
 const PM = Object.fromEntries(PREFS.map(p => [p.key, p]));
 
@@ -311,12 +311,13 @@ export default function App() {
   const totalPossible = settings.periods * settings.duration;
 
   /* ─── Sub-components ─── */
-  const Chip = ({ id, small = false }) => {
+  const Chip = ({ id, small = false, inGKSlot = false }) => {
     if (!id) return null;
     const p = getP(id);
     if (!p) return null;
     const isSelected = sel === id;
     const isSel2nd = sel && sel !== id;
+    const activeGK = p.isGK && inGKSlot;
 
     return (
       <div
@@ -326,7 +327,7 @@ export default function App() {
           maxWidth: "100%", overflow: "hidden",
           background: isSelected ? "#fef08a" : "#0f172a",
           color: isSelected ? "#0f172a" : "#e2e8f0",
-          border: `2px solid ${isSelected ? "#fbbf24" : p.isGK ? "#fbbf24" : "#334155"}`,
+          border: `2px solid ${isSelected ? "#fbbf24" : activeGK ? "#fbbf24" : "#334155"}`,
           borderRadius: 8,
           padding: small ? "3px 7px" : "4px 8px",
           fontSize: small ? 12 : 13,
@@ -338,7 +339,12 @@ export default function App() {
           boxShadow: isSelected ? "0 0 0 3px rgba(251,191,36,0.3)" : "none",
         }}
       >
-        {p.isGK && <span style={{ fontSize: 10, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>}
+        {activeGK && (
+          <span style={{ fontSize: 10, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
+        )}
+        {p.isGK && !inGKSlot && (
+          <span style={{ fontSize: 9, color: "#475569", fontWeight: 600 }}>mv</span>
+        )}
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
       </div>
     );
@@ -397,7 +403,7 @@ export default function App() {
         {label}
       </div>
       {id
-        ? <Chip id={id} />
+        ? <Chip id={id} inGKSlot={label === "Målvakt"} />
         : <div style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 8px", fontSize: 12, color: "#334155" }}>—</div>
       }
     </div>
