@@ -849,13 +849,9 @@ export default function App() {
             })()}
 
             {/* Period cards */}
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: isDesktop ? "1fr 1fr" : "1fr",
-              gap: isDesktop ? 24 : 0,
-            }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 0 }}>
               {plan.map((period, i) => (
-                <div key={i} style={isDesktop && i === 0 ? { gridColumn: "1 / -1" } : {}}>
+                <div key={i}>
                   {/* Mobile break separator between periods */}
                   {!isDesktop && i > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "24px 0 20px" }}>
@@ -887,8 +883,8 @@ export default function App() {
                     </div>
 
                     {/* Pitch — one or two halves */}
-                    {period.att2 != null && isDesktop && i === 0 ? (
-                      /* Desktop period 1: halves side by side */
+                    {period.att2 != null && isDesktop ? (
+                      /* Desktop: halves side by side */
                       <div style={{ display: "flex" }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <HalfLabel text={`1. Halvlek · ${Math.round(settings.duration / 2)} min`} />
