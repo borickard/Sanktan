@@ -129,7 +129,7 @@ function generatePlan(players, settings) {
 
 /* ─── Main App ─── */
 export default function App() {
-  const [tab, setTab]         = useState("players");
+  const [tab, setTab]         = useState(initFromURL?.tab ?? "players");
   const [players, setPlayers] = useState(initFromURL?.players ?? DEMO);
   const [newName, setNewName] = useState("");
   const [settings, setSettings] = useState({
@@ -151,10 +151,10 @@ export default function App() {
 
   useEffect(() => {
     try {
-      const encoded = btoa(encodeURIComponent(JSON.stringify({ players, settings, plan })));
+      const encoded = btoa(encodeURIComponent(JSON.stringify({ players, settings, plan, tab })));
       window.history.replaceState(null, "", "#" + encoded);
     } catch {}
-  }, [players, settings, plan]);
+  }, [players, settings, plan, tab]);
 
   const fmt = FM[settings.format] ?? FM["5v5"];
   const getP = id => players.find(p => p.id === id);
@@ -188,11 +188,46 @@ export default function App() {
     if (originalPlan) { setPlan(originalPlan); setSel(null); }
   };
 
+  const [shareOpen, setShareOpen] = useState(false);
+
   const copyLink = () => {
     navigator.clipboard?.writeText(window.location.href)
       .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })
       .catch(() => {});
   };
+
+  const ShareBar = () => (
+    <div style={{ marginTop: 8 }}>
+      <button onClick={() => setShareOpen(o => !o)} style={{
+        ...S.btn("secondary"), width: "100%", padding: "11px 0", fontSize: 13,
+      }}>
+        {shareOpen ? "✕ Stäng dela" : "🔗 Dela länk"}
+      </button>
+      {shareOpen && (
+        <div style={{ marginTop: 6, background: "#1e293b", border: "1px solid #334155", borderRadius: 9, padding: "10px 12px" }}>
+          <div style={{ fontSize: 11, color: "#475569", marginBottom: 8 }}>
+            Länken uppdateras automatiskt — kopiera och skicka den till någon annan.
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              readOnly
+              value={window.location.href}
+              onFocus={e => e.target.select()}
+              style={{
+                flex: 1, minWidth: 0, background: "#0f172a", border: "1px solid #334155",
+                color: "#94a3b8", borderRadius: 7, padding: "8px 10px", fontSize: 12, outline: "none",
+              }}
+            />
+            <button onClick={copyLink} style={{
+              ...S.btn(copied ? "primary" : "secondary"), padding: "8px 14px", fontSize: 12, flexShrink: 0,
+            }}>
+              {copied ? "✓ Kopierad!" : "Kopiera"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   /* Global schedule swap of two players */
   const tapPlayer = useCallback(id => {
@@ -605,12 +640,7 @@ export default function App() {
               GENERERA MATCHPLAN →
             </button>
 
-            {/* Share button */}
-            <button onClick={copyLink} style={{
-              ...S.btn("secondary"), width: "100%", marginTop: 8, padding: "11px 0", fontSize: 13,
-            }}>
-              {copied ? "✓ Länk kopierad!" : "🔗 Dela länk"}
-            </button>
+            <ShareBar />
           </div>
         )}
 
@@ -643,7 +673,7 @@ export default function App() {
             </div>
 
             {/* Action buttons */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
               <button onClick={doGenerate} style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13 }}>
                 ↻ Generera om
               </button>
@@ -657,10 +687,9 @@ export default function App() {
               <button onClick={() => setTab("players")} style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13 }}>
                 ✎ Redigera
               </button>
-              <button onClick={copyLink} style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13 }}>
-                {copied ? "✓ Kopierad!" : "🔗 Dela"}
-              </button>
             </div>
+            <ShareBar />
+            <div style={{ marginBottom: 16 }} />
 
             {/* Period cards */}
             {plan.map((period, i) => (
