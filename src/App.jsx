@@ -803,17 +803,21 @@ export default function App() {
                   )}
 
                   {/* Controls */}
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={goPrev} disabled={timerPeriod === 0}
-                      style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 15, opacity: timerPeriod === 0 ? 0.35 : 1 }}>◀</button>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={reset}
+                      style={{ ...S.btn("secondary"), padding: "9px 11px", fontSize: 15 }}>↺</button>
+                    <button onClick={() => setTimerElapsed(e => Math.max(0, e - 15))}
+                      style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 12, fontWeight: 700 }}>−15s</button>
                     <button onClick={() => setTimerRunning(r => !r)}
                       style={{ ...S.btn("primary"), flex: 2, padding: "9px 0", fontSize: 14 }}>
                       {timerRunning ? "⏸ Pausa" : timerElapsed > 0 ? "▶ Fortsätt" : "▶ Starta"}
                     </button>
-                    <button onClick={reset}
-                      style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 15 }}>↺</button>
+                    <button onClick={() => setTimerElapsed(e => e + 15)}
+                      style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 12, fontWeight: 700 }}>+15s</button>
+                    <button onClick={goPrev} disabled={timerPeriod === 0}
+                      style={{ ...S.btn("secondary"), padding: "9px 11px", fontSize: 15, opacity: timerPeriod === 0 ? 0.35 : 1 }}>«</button>
                     <button onClick={goNext} disabled={timerPeriod >= plan.length - 1}
-                      style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 15, opacity: timerPeriod >= plan.length - 1 ? 0.35 : 1 }}>▶▶</button>
+                      style={{ ...S.btn("secondary"), padding: "9px 11px", fontSize: 15, opacity: timerPeriod >= plan.length - 1 ? 0.35 : 1 }}>»</button>
                   </div>
                 </div>
               );
