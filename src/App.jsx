@@ -1,4 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  Zap, Shuffle, Shield, Layers,
+  Play, Pause, RotateCcw, RefreshCw, SkipBack, SkipForward,
+  ArrowUpDown, AlertTriangle, Link2, X, Check,
+  Users, ClipboardList, Pencil, ChevronRight,
+} from "lucide-react";
 
 /* ─── ID factory ─── */
 let _uid = 100;
@@ -6,9 +12,9 @@ const uid = () => ++_uid;
 
 /* ─── Constants ─── */
 const PREFS = [
-  { key: "attack",  label: "Anfall",     icon: "▲", color: "#f97316" },
-  { key: "neutral", label: "Balanserad", icon: "◆", color: "#94a3b8" },
-  { key: "defense", label: "Försvar",    icon: "▼", color: "#60a5fa" },
+  { key: "attack",  label: "Anfall",   Icon: Zap,     color: "#f97316" },
+  { key: "neutral", label: "Mix",      Icon: Shuffle, color: "#94a3b8" },
+  { key: "defense", label: "Defensiv", Icon: Shield,  color: "#60a5fa" },
 ];
 const PM = Object.fromEntries(PREFS.map(p => [p.key, p]));
 
@@ -222,7 +228,7 @@ export default function App() {
       <button onClick={() => setShareOpen(o => !o)} style={{
         ...S.btn("secondary"), width: "100%", padding: "11px 0", fontSize: 13,
       }}>
-        {shareOpen ? "✕ Stäng dela" : "🔗 Dela länk"}
+        {shareOpen ? <><X size={13} /> Stäng dela</> : <><Link2 size={13} /> Dela länk</>}
       </button>
       {shareOpen && (
         <div style={{ marginTop: 6, background: "#1e293b", border: "1px solid #334155", borderRadius: 9, padding: "10px 12px" }}>
@@ -242,7 +248,7 @@ export default function App() {
             <button onClick={copyLink} style={{
               ...S.btn(copied ? "primary" : "secondary"), padding: "8px 14px", fontSize: 12, flexShrink: 0,
             }}>
-              {copied ? "✓ Kopierad!" : "Kopiera"}
+              {copied ? <><Check size={12} /> Kopierad!</> : "Kopiera"}
             </button>
           </div>
         </div>
@@ -363,7 +369,7 @@ export default function App() {
     }}>
       <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(180deg, transparent 0px, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px)", pointerEvents: "none" }} />
       <div style={{ marginBottom: 4 }}>
-        <div style={{ fontSize: 9, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600 }}>⚡ Anfallszon</div>
+        <div style={{ fontSize: 9, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Zap size={9} /> Anfallszon</div>
         <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
           {att.map((id, j) => <PositionSlot key={j} id={id} label={`Anfall ${j + 1}`} />)}
         </div>
@@ -374,7 +380,7 @@ export default function App() {
       </div>
       {fmt.mid > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 9, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600 }}>⚖ Mittfält</div>
+          <div style={{ fontSize: 9, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Layers size={9} /> Mittfält</div>
           <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
             {(mid ?? []).map((id, j) => <PositionSlot key={j} id={id} label={`Mitt ${j + 1}`} />)}
           </div>
@@ -384,7 +390,7 @@ export default function App() {
         <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
           {def.map((id, j) => <PositionSlot key={j} id={id} label={`Försvar ${j + 1}`} />)}
         </div>
-        <div style={{ fontSize: 9, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 8, fontWeight: 600 }}>🛡 Försvarszon</div>
+        <div style={{ fontSize: 9, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={9} /> Försvarszon</div>
       </div>
       {showGK && fmt.hasGK && (
         <>
@@ -419,6 +425,7 @@ export default function App() {
       color: active ? "#84cc16" : "#64748b",
       borderBottom: `2px solid ${active ? "#84cc16" : "transparent"}`,
       fontSize: 14, fontWeight: active ? 600 : 400, transition: "all 0.15s",
+      display: "inline-flex", alignItems: "center", gap: 6,
     }),
     body:  { padding: isDesktop ? "24px 32px 60px" : "16px 16px 40px", maxWidth: isDesktop ? (tab === "plan" ? 980 : 640) : "100%", margin: "0 auto" },
     card:  { background: "#1e293b", borderRadius: 12, marginBottom: 12, overflow: "hidden" },
@@ -426,6 +433,7 @@ export default function App() {
       border: "none", borderRadius: 9, cursor: "pointer",
       fontFamily: "'DM Sans', system-ui, sans-serif",
       fontWeight: 600, transition: "all 0.15s",
+      display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
       ...(variant === "primary"   ? { background: "#84cc16", color: "#0f172a" } : {}),
       ...(variant === "secondary" ? { background: "#1e293b", color: "#84cc16", border: "1px solid #334155" } : {}),
       ...(variant === "ghost"     ? { background: "transparent", color: "#94a3b8" } : {}),
@@ -448,10 +456,13 @@ export default function App() {
 
       {/* Tabs */}
       <div style={S.tabs}>
-        {[["players", "👥 Spelare"], ["plan", "📋 Matchplan"]].map(([key, label]) => (
+        {[
+          { key: "players", Icon: Users,        text: "Spelare" },
+          { key: "plan",    Icon: ClipboardList, text: "Matchplan" },
+        ].map(({ key, Icon: TabIcon, text }) => (
           <button key={key} style={S.tab(tab === key)}
             onClick={e => { e.stopPropagation(); setTab(key); }}>
-            {label}
+            <TabIcon size={14} /> {text}
           </button>
         ))}
       </div>
@@ -521,15 +532,16 @@ export default function App() {
                         border: "none", borderRadius: 6, padding: "3px 7px",
                         fontSize: 12, cursor: "pointer", transition: "all 0.15s",
                         color: p.pref === pr.key ? (pr.key === "neutral" ? "#0f172a" : "#fff") : "#475569",
+                        display: "inline-flex", alignItems: "center",
                       }}>
-                      {pr.icon}
+                      <pr.Icon size={12} />
                     </button>
                   ))}
                 </div>
 
                 <button onClick={() => delP(p.id)}
-                  style={{ background: "none", border: "none", color: "#334155", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "0 2px" }}>
-                  ×
+                  style={{ background: "none", border: "none", color: "#334155", cursor: "pointer", padding: "0 2px", display: "inline-flex", alignItems: "center" }}>
+                  <X size={14} />
                 </button>
               </div>
             ))}
@@ -568,8 +580,8 @@ export default function App() {
                     const extra = matched.length - slots;
                     return (
                       <div key={pref} style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
-                        <span style={{ fontSize: 11, color: pr.color, fontWeight: 600, minWidth: 70, flexShrink: 0 }}>
-                          {pr.icon} {label}
+                        <span style={{ fontSize: 11, color: pr.color, fontWeight: 600, minWidth: 70, flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          <pr.Icon size={11} /> {label}
                         </span>
                         <span style={{ fontSize: 10, color: "#334155", minWidth: 55, flexShrink: 0 }}>
                           {slots} plats{slots !== 1 ? "er" : ""}
@@ -583,8 +595,8 @@ export default function App() {
                     );
                   })}
                   {settings.subs >= 1 && (
-                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #1e3a5f", fontSize: 11, color: "#475569" }}>
-                      ↕ {settings.subs} byte per period — spelarna roterar in halvvägs
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #1e3a5f", fontSize: 11, color: "#475569", display: "flex", alignItems: "center", gap: 5 }}>
+                      <ArrowUpDown size={11} /> {settings.subs} byte per period — spelarna roterar in halvvägs
                     </div>
                   )}
                 </div>
@@ -614,7 +626,7 @@ export default function App() {
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                 {PREFS.map(pr => (
                   <div key={pr.key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ fontSize: 14 }}>{pr.icon}</span>
+                    <pr.Icon size={14} color={pr.color} />
                     <span style={{ fontSize: 12, color: pr.color }}>{pr.label}</span>
                   </div>
                 ))}
@@ -682,7 +694,7 @@ export default function App() {
               ...S.btn("primary"), width: "100%", marginTop: 16, padding: 15,
               fontSize: 17, fontFamily: "'Bebas Neue', cursive", letterSpacing: 3,
             }}>
-              GENERERA MATCHPLAN →
+              GENERERA MATCHPLAN <ChevronRight size={17} />
             </button>
 
             <ShareBar />
@@ -692,11 +704,13 @@ export default function App() {
         {/* ═══ PLAN TAB ═══ */}
         {tab === "plan" && !plan && (
           <div style={{ textAlign: "center", padding: "50px 20px", color: "#475569" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
+            <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
+              <ClipboardList size={48} color="#475569" />
+            </div>
             <div style={{ marginBottom: 20, fontSize: 15 }}>Ingen matchplan skapad ännu.</div>
             <button onClick={() => setTab("players")}
               style={{ ...S.btn("primary"), padding: "12px 24px", fontSize: 14 }}>
-              Gå till spelare →
+              Gå till spelare <ChevronRight size={14} />
             </button>
           </div>
         )}
@@ -720,17 +734,17 @@ export default function App() {
             {/* Action buttons */}
             <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
               <button onClick={doGenerate} style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13 }}>
-                ↻ Generera om
+                <RefreshCw size={13} /> Generera om
               </button>
               <button
                 onClick={doReset}
                 disabled={!originalPlan}
                 title="Återställ till den automatiskt genererade fördelningen"
                 style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13, opacity: originalPlan ? 1 : 0.4 }}>
-                ⟳ Återställ
+                <RotateCcw size={13} /> Återställ
               </button>
               <button onClick={() => setTab("players")} style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13 }}>
-                ✎ Redigera
+                <Pencil size={13} /> Redigera
               </button>
             </div>
             <ShareBar />
@@ -775,8 +789,8 @@ export default function App() {
                     <div style={{ background: barColor, width: `${barPct}%`, height: "100%", borderRadius: 6, transition: "width 0.8s linear, background 0.3s" }} />
                   </div>
                   {settings.subs >= 1 && (
-                    <div style={{ fontSize: 9, color: "#334155", textAlign: "center", marginBottom: 10, letterSpacing: 1 }}>
-                      ↕ byte vid {Math.round(settings.duration / 2)} min
+                    <div style={{ fontSize: 9, color: "#334155", textAlign: "center", marginBottom: 10, letterSpacing: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}>
+                      <ArrowUpDown size={9} /> byte vid {Math.round(settings.duration / 2)} min
                     </div>
                   )}
 
@@ -788,8 +802,9 @@ export default function App() {
                       padding: "8px 12px", textAlign: "center",
                       fontSize: 13, fontWeight: 700, color: "#fed7aa", marginBottom: 10,
                       transition: "background 0.2s",
+                      display: "flex", justifyContent: "center", alignItems: "center", gap: 6,
                     }}>
-                      ↕ BYT SPELARE NU!
+                      <ArrowUpDown size={13} /> BYT SPELARE NU!
                     </div>
                   )}
                   {isOvertime && (
@@ -797,27 +812,34 @@ export default function App() {
                       background: "#450a0a", border: "1px solid #dc2626", borderRadius: 8,
                       padding: "8px 12px", textAlign: "center",
                       fontSize: 13, fontWeight: 700, color: "#fca5a5", marginBottom: 10,
+                      display: "flex", justifyContent: "center", alignItems: "center", gap: 6,
                     }}>
-                      ⚠ ÖVERTID +{fmtTime(timerElapsed - periodSecs)}
+                      <AlertTriangle size={13} /> ÖVERTID +{fmtTime(timerElapsed - periodSecs)}
                     </div>
                   )}
 
                   {/* Controls */}
                   <div style={{ display: "flex", gap: 6 }}>
                     <button onClick={reset}
-                      style={{ ...S.btn("secondary"), padding: "9px 11px", fontSize: 15 }}>↺</button>
+                      style={{ ...S.btn("secondary"), padding: "9px 11px" }}>
+                      <RotateCcw size={15} />
+                    </button>
                     <button onClick={() => setTimerElapsed(e => Math.max(0, e - 15))}
                       style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 12, fontWeight: 700 }}>−15s</button>
                     <button onClick={() => setTimerRunning(r => !r)}
                       style={{ ...S.btn("primary"), flex: 2, padding: "9px 0", fontSize: 14 }}>
-                      {timerRunning ? "⏸ Pausa" : timerElapsed > 0 ? "▶ Fortsätt" : "▶ Starta"}
+                      {timerRunning ? <><Pause size={14} /> Pausa</> : <><Play size={14} /> {timerElapsed > 0 ? "Fortsätt" : "Starta"}</>}
                     </button>
                     <button onClick={() => setTimerElapsed(e => e + 15)}
                       style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 12, fontWeight: 700 }}>+15s</button>
                     <button onClick={goPrev} disabled={timerPeriod === 0}
-                      style={{ ...S.btn("secondary"), padding: "9px 11px", fontSize: 15, opacity: timerPeriod === 0 ? 0.35 : 1 }}>«</button>
+                      style={{ ...S.btn("secondary"), padding: "9px 11px", opacity: timerPeriod === 0 ? 0.35 : 1 }}>
+                      <SkipBack size={15} />
+                    </button>
                     <button onClick={goNext} disabled={timerPeriod >= plan.length - 1}
-                      style={{ ...S.btn("secondary"), padding: "9px 11px", fontSize: 15, opacity: timerPeriod >= plan.length - 1 ? 0.35 : 1 }}>»</button>
+                      style={{ ...S.btn("secondary"), padding: "9px 11px", opacity: timerPeriod >= plan.length - 1 ? 0.35 : 1 }}>
+                      <SkipForward size={15} />
+                    </button>
                   </div>
                 </div>
               );
@@ -870,7 +892,7 @@ export default function App() {
                           background: "#061812", borderTop: "1px dashed #1a5c33", borderBottom: "1px dashed #1a5c33",
                           padding: "7px 14px", display: "flex", justifyContent: "center", alignItems: "center", gap: 10,
                         }}>
-                          <span style={{ fontSize: 11, color: "#4ade80", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>↕ HALVTID</span>
+                          <span style={{ fontSize: 11, color: "#4ade80", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", display: "inline-flex", alignItems: "center", gap: 5 }}><ArrowUpDown size={11} /> HALVTID</span>
                           {fmt.hasGK && <span style={{ fontSize: 10, color: "#475569" }}>MV stannar · alla utespelare byts</span>}
                         </div>
                         <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
@@ -916,11 +938,11 @@ export default function App() {
 
                   const ps = posStats[p.id] ?? {};
                   const posBadges = [
-                    ps.gk    > 0 && { label: "MV",   count: ps.gk,    bg: "#fbbf2426", color: "#fbbf24" },
-                    ps.att   > 0 && { label: "⚡",   count: ps.att,   bg: "#f9731626", color: "#f97316" },
-                    ps.mid   > 0 && { label: "⚖",   count: ps.mid,   bg: "#94a3b826", color: "#94a3b8" },
-                    ps.def   > 0 && { label: "🛡",   count: ps.def,   bg: "#60a5fa26", color: "#60a5fa" },
-                    ps.bench > 0 && { label: "Bänk", count: ps.bench, bg: "#1e293b",   color: "#475569" },
+                    ps.gk    > 0 && { key: "gk",    label: "MV",   Icon: null,    count: ps.gk,    bg: "#fbbf2426", color: "#fbbf24" },
+                    ps.att   > 0 && { key: "att",   label: null,   Icon: Zap,     count: ps.att,   bg: "#f9731626", color: "#f97316" },
+                    ps.mid   > 0 && { key: "mid",   label: null,   Icon: Shuffle, count: ps.mid,   bg: "#94a3b826", color: "#94a3b8" },
+                    ps.def   > 0 && { key: "def",   label: null,   Icon: Shield,  count: ps.def,   bg: "#60a5fa26", color: "#60a5fa" },
+                    ps.bench > 0 && { key: "bench", label: "Bänk", Icon: null,    count: ps.bench, bg: "#1e293b",   color: "#475569" },
                   ].filter(Boolean);
 
                   return (
@@ -929,7 +951,7 @@ export default function App() {
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           {p.isGK
                             ? <span style={{ fontSize: 10, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
-                            : <span style={{ fontSize: 12 }}>{pref.icon}</span>
+                            : <pref.Icon size={12} color={pref.color} />
                           }
                           <span style={{ fontSize: 13, color: "#cbd5e1" }}>{p.name}</span>
                         </div>
@@ -939,11 +961,12 @@ export default function App() {
                       </div>
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 5 }}>
                         {posBadges.map(b => (
-                          <span key={b.label} style={{
+                          <span key={b.key} style={{
                             fontSize: 10, fontWeight: 600, borderRadius: 5,
                             padding: "2px 6px", background: b.bg, color: b.color,
+                            display: "inline-flex", alignItems: "center", gap: 3,
                           }}>
-                            {b.label} ×{b.count}
+                            {b.Icon ? <b.Icon size={9} /> : b.label} ×{b.count}
                           </span>
                         ))}
                       </div>
@@ -967,15 +990,16 @@ export default function App() {
                 const fair = maxDiff <= settings.duration / 2;
                 return (
                   <div style={{
-                    marginTop: 12, padding: "8px 12px", borderRadius: 8, textAlign: "center",
+                    marginTop: 12, padding: "8px 12px", borderRadius: 8,
                     background: fair ? "#0a2e1a" : "#2d1b0a",
                     border: `1px solid ${fair ? "#1a5c33" : "#7c3d12"}`,
                     fontSize: 12,
                     color: fair ? "#4ade80" : "#fb923c",
+                    display: "flex", justifyContent: "center", alignItems: "center", gap: 6,
                   }}>
                     {fair
-                      ? "✓ Speltiden är jämnt fördelad"
-                      : `⚠ Max skillnad: ${Math.round(maxDiff)} min — byt runt för bättre balans`
+                      ? <><Check size={12} /> Speltiden är jämnt fördelad</>
+                      : <><AlertTriangle size={12} /> Max skillnad: {Math.round(maxDiff)} min — byt runt för bättre balans</>
                     }
                   </div>
                 );
