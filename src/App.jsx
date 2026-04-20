@@ -849,7 +849,7 @@ export default function App() {
             })()}
 
             {/* Period cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 0 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: isDesktop ? 24 : 0 }}>
               {plan.map((period, i) => (
                 <div key={i}>
                   {/* Mobile break separator between periods */}
