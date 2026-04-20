@@ -294,7 +294,6 @@ export default function App() {
     if (!id) return null;
     const p = getP(id);
     if (!p) return null;
-    const pref = PM[p.pref];
     const isSelected = sel === id;
     const isSel2nd = sel && sel !== id;
 
@@ -306,7 +305,7 @@ export default function App() {
           maxWidth: "100%", overflow: "hidden",
           background: isSelected ? "#fef08a" : "#0f172a",
           color: isSelected ? "#0f172a" : "#e2e8f0",
-          border: `2px solid ${isSelected ? "#fbbf24" : p.isGK ? "#fbbf24" : pref.color}`,
+          border: `2px solid ${isSelected ? "#fbbf24" : p.isGK ? "#fbbf24" : "#334155"}`,
           borderRadius: 8,
           padding: small ? "3px 7px" : "4px 8px",
           fontSize: small ? 12 : 13,
@@ -318,10 +317,7 @@ export default function App() {
           boxShadow: isSelected ? "0 0 0 3px rgba(251,191,36,0.3)" : "none",
         }}
       >
-        {p.isGK
-          ? <span style={{ fontSize: 10, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
-          : <span style={{ fontSize: 11 }}>{pref.icon}</span>
-        }
+        {p.isGK && <span style={{ fontSize: 10, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>}
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
       </div>
     );
@@ -448,16 +444,38 @@ export default function App() {
                   onClick={() => updP(p.id, "enabled", p.enabled === false)}
                   title={p.enabled !== false ? "Avaktivera (ej med idag)" : "Aktivera"}
                   style={{
-                    width: 12, height: 12, borderRadius: "50%", padding: 0, flexShrink: 0, cursor: "pointer",
-                    background: p.enabled !== false ? (p.isGK ? "#fbbf24" : PM[p.pref].color) : "transparent",
-                    border: `2px solid ${p.enabled !== false ? (p.isGK ? "#fbbf24" : PM[p.pref].color) : "#475569"}`,
-                    transition: "all 0.15s",
+                    position: "relative", flexShrink: 0,
+                    width: 36, height: 20, borderRadius: 10, padding: 0,
+                    background: p.enabled !== false ? "#84cc16" : "#334155",
+                    border: "none", cursor: "pointer", transition: "background 0.2s",
                   }}
-                />
+                >
+                  <div style={{
+                    position: "absolute", top: 2,
+                    left: p.enabled !== false ? 17 : 2,
+                    width: 16, height: 16, borderRadius: "50%",
+                    background: "#fff", transition: "left 0.2s",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+                  }} />
+                </button>
 
                 <input
+                  id={`player-name-${p.id}`}
                   value={p.name}
                   onChange={e => updP(p.id, "name", e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
+                      e.preventDefault();
+                      const idx = players.findIndex(pl => pl.id === p.id);
+                      const next = players[idx + 1];
+                      if (next) document.getElementById(`player-name-${next.id}`)?.focus();
+                    } else if (e.key === "Tab" && e.shiftKey) {
+                      e.preventDefault();
+                      const idx = players.findIndex(pl => pl.id === p.id);
+                      const prev = players[idx - 1];
+                      if (prev) document.getElementById(`player-name-${prev.id}`)?.focus();
+                    }
+                  }}
                   style={{ flex: 1, minWidth: 0, background: "none", border: "none", color: "#e2e8f0", fontSize: 15, fontWeight: 500, outline: "none" }}
                 />
 
