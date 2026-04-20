@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 /* ─── ID factory ─── */
 let _uid = 100;
@@ -140,6 +140,11 @@ export default function App() {
   const [originalPlan, setOriginalPlan] = useState(initFromURL?.plan ?? null);
   const [sel, setSel]           = useState(null);
   const [copied, setCopied] = useState(false);
+  const [winW, setWinW]     = useState(window.innerWidth);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerElapsed, setTimerElapsed] = useState(0); // seconds
+  const [timerPeriod,  setTimerPeriod]  = useState(0); // 0-indexed
+  const timerRef = useRef(null);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -156,8 +161,24 @@ export default function App() {
     } catch {}
   }, [players, settings, plan, tab]);
 
-  const fmt = FM[settings.format] ?? FM["5v5"];
-  const getP = id => players.find(p => p.id === id);
+  useEffect(() => {
+    const h = () => setWinW(window.innerWidth);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+
+  useEffect(() => {
+    clearInterval(timerRef.current);
+    if (timerRunning) {
+      timerRef.current = setInterval(() => setTimerElapsed(e => e + 1), 1000);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [timerRunning]);
+
+  const fmt       = FM[settings.format] ?? FM["5v5"];
+  const isDesktop = winW >= 700;
+  const fmtTime   = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const getP      = id => players.find(p => p.id === id);
 
   const addPlayer = () => {
     const n = newName.trim();
@@ -393,7 +414,7 @@ export default function App() {
       borderBottom: `2px solid ${active ? "#84cc16" : "transparent"}`,
       fontSize: 14, fontWeight: active ? 600 : 400, transition: "all 0.15s",
     }),
-    body:  { padding: "16px 16px 40px", maxWidth: 480, margin: "0 auto" },
+    body:  { padding: isDesktop ? "24px 32px 60px" : "16px 16px 40px", maxWidth: isDesktop ? (tab === "plan" ? 980 : 640) : "100%", margin: "0 auto" },
     card:  { background: "#1e293b", borderRadius: 12, marginBottom: 12, overflow: "hidden" },
     btn:   (variant = "primary") => ({
       border: "none", borderRadius: 9, cursor: "pointer",
@@ -709,66 +730,162 @@ export default function App() {
             <ShareBar />
             <div style={{ marginBottom: 16 }} />
 
-            {/* Period cards */}
-            {plan.map((period, i) => (
-              <div key={i} style={{ ...S.card, marginBottom: 16 }}>
+            {/* ─── Timer ─── */}
+            {(() => {
+              const periodSecs  = settings.duration * 60;
+              const halfSecs    = Math.round(periodSecs / 2);
+              const isOvertime  = timerElapsed >= periodSecs;
+              const isSwitchDue = settings.subs >= 1 && timerElapsed >= halfSecs;
+              const switchBlink = isSwitchDue && !isOvertime && timerElapsed % 2 === 0;
+              const barPct      = Math.min(timerElapsed / periodSecs * 100, 100);
+              const barColor    = isOvertime ? "#f87171" : isSwitchDue ? "#fb923c" : "#4ade80";
+              const timeColor   = isOvertime ? "#f87171" : isSwitchDue ? "#fb923c" : "#e2e8f0";
+              const clampedPeriod = Math.min(timerPeriod, plan.length - 1);
 
-                {/* Period header */}
-                <div style={{
-                  background: "linear-gradient(135deg, #0a2e1a 0%, #0d3821 100%)",
-                  padding: "10px 16px",
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                  borderBottom: "1px solid #1a5c33",
-                }}>
-                  <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 22, letterSpacing: 2, color: "#4ade80" }}>
-                    Period {i + 1}
+              const goPrev = () => { setTimerPeriod(p => Math.max(0, p - 1)); setTimerElapsed(0); };
+              const goNext = () => { setTimerPeriod(p => Math.min(plan.length - 1, p + 1)); setTimerElapsed(0); setTimerRunning(true); };
+              const reset  = () => { setTimerElapsed(0); setTimerRunning(false); };
+
+              return (
+                <div style={{ ...S.card, padding: "16px", marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 15, letterSpacing: 2, color: "#475569" }}>TIMER</div>
+                    <div style={{ fontSize: 12, color: "#475569" }}>Period {clampedPeriod + 1} / {plan.length}</div>
                   </div>
-                  <div style={{ fontSize: 12, color: "#4ade80", opacity: 0.7 }}>
-                    {settings.format} &nbsp;·&nbsp; {settings.duration} min
+
+                  {/* Big time display */}
+                  <div style={{ textAlign: "center", marginBottom: 10 }}>
+                    <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 60, letterSpacing: 4, color: timeColor, lineHeight: 1, transition: "color 0.3s" }}>
+                      {fmtTime(timerElapsed)}
+                    </span>
+                    <span style={{ fontSize: 12, color: "#334155", marginLeft: 6 }}>/ {settings.duration}:00</span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div style={{ background: "#0f172a", borderRadius: 6, height: 10, marginBottom: 4, position: "relative", overflow: "hidden" }}>
+                    {settings.subs >= 1 && (
+                      <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 2, background: "#1e3a5f", zIndex: 1 }} />
+                    )}
+                    <div style={{ background: barColor, width: `${barPct}%`, height: "100%", borderRadius: 6, transition: "width 0.8s linear, background 0.3s" }} />
+                  </div>
+                  {settings.subs >= 1 && (
+                    <div style={{ fontSize: 9, color: "#334155", textAlign: "center", marginBottom: 10, letterSpacing: 1 }}>
+                      ↕ byte vid {Math.round(settings.duration / 2)} min
+                    </div>
+                  )}
+
+                  {/* Status banners */}
+                  {isSwitchDue && !isOvertime && (
+                    <div style={{
+                      background: switchBlink ? "#7c2d12" : "#431407",
+                      border: "1px solid #ea580c", borderRadius: 8,
+                      padding: "8px 12px", textAlign: "center",
+                      fontSize: 13, fontWeight: 700, color: "#fed7aa", marginBottom: 10,
+                      transition: "background 0.2s",
+                    }}>
+                      ↕ BYT SPELARE NU!
+                    </div>
+                  )}
+                  {isOvertime && (
+                    <div style={{
+                      background: "#450a0a", border: "1px solid #dc2626", borderRadius: 8,
+                      padding: "8px 12px", textAlign: "center",
+                      fontSize: 13, fontWeight: 700, color: "#fca5a5", marginBottom: 10,
+                    }}>
+                      ⚠ ÖVERTID +{fmtTime(timerElapsed - periodSecs)}
+                    </div>
+                  )}
+
+                  {/* Controls */}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={goPrev} disabled={timerPeriod === 0}
+                      style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 15, opacity: timerPeriod === 0 ? 0.35 : 1 }}>◀</button>
+                    <button onClick={() => setTimerRunning(r => !r)}
+                      style={{ ...S.btn("primary"), flex: 2, padding: "9px 0", fontSize: 14 }}>
+                      {timerRunning ? "⏸ Pausa" : timerElapsed > 0 ? "▶ Fortsätt" : "▶ Starta"}
+                    </button>
+                    <button onClick={reset}
+                      style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 15 }}>↺</button>
+                    <button onClick={goNext} disabled={timerPeriod >= plan.length - 1}
+                      style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 15, opacity: timerPeriod >= plan.length - 1 ? 0.35 : 1 }}>▶▶</button>
                   </div>
                 </div>
+              );
+            })()}
 
-                {/* Pitch — one or two halves */}
-                {period.att2 != null ? (
-                  <>
-                    <HalfLabel text={`1. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                    <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK />
-                    <div style={{
-                      background: "#061812", borderTop: "1px dashed #1a5c33", borderBottom: "1px dashed #1a5c33",
-                      padding: "7px 14px", display: "flex", justifyContent: "center", alignItems: "center", gap: 10,
-                    }}>
-                      <span style={{ fontSize: 11, color: "#4ade80", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>
-                        ↕ HALVTID
-                      </span>
-                      {fmt.hasGK && (
-                        <span style={{ fontSize: 10, color: "#475569" }}>
-                          MV stannar · alla utespelare byts
-                        </span>
-                      )}
+            {/* Period cards */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: isDesktop ? "1fr 1fr" : "1fr",
+              gap: isDesktop ? 24 : 0,
+            }}>
+              {plan.map((period, i) => (
+                <div key={i}>
+                  {/* Mobile break separator between periods */}
+                  {!isDesktop && i > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "24px 0 20px" }}>
+                      <div style={{ flex: 1, height: 1, background: "#1e293b" }} />
+                      <div style={{ fontSize: 9, color: "#334155", textTransform: "uppercase", letterSpacing: 3, fontWeight: 600 }}>paus</div>
+                      <div style={{ flex: 1, height: 1, background: "#1e293b" }} />
                     </div>
-                    <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                    <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK />
-                  </>
-                ) : (
-                  <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK />
-                )}
+                  )}
 
-                {/* Bench row */}
-                {period.bench.length > 0 && (
                   <div style={{
-                    background: "#111827", borderTop: "1px solid #1e293b",
-                    padding: "8px 14px",
+                    ...S.card, marginBottom: 0,
+                    outline: timerPeriod === i ? `2px solid ${timerRunning ? "#4ade80" : "#334155"}` : "none",
+                    outlineOffset: 2,
                   }}>
-                    <div style={{ fontSize: 9, color: "#334155", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7, fontWeight: 600 }}>
-                      Hel period på bänken
+
+                    {/* Period header */}
+                    <div style={{
+                      background: "linear-gradient(135deg, #0a2e1a 0%, #0d3821 100%)",
+                      padding: "10px 16px",
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      borderBottom: "1px solid #1a5c33",
+                    }}>
+                      <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 22, letterSpacing: 2, color: "#4ade80" }}>
+                        Period {i + 1}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#4ade80", opacity: 0.7 }}>
+                        {settings.format} &nbsp;·&nbsp; {settings.duration} min
+                      </div>
                     </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {period.bench.map(id => <Chip key={id} id={id} small />)}
-                    </div>
+
+                    {/* Pitch — one or two halves */}
+                    {period.att2 != null ? (
+                      <>
+                        <HalfLabel text={`1. Halvlek · ${Math.round(settings.duration / 2)} min`} />
+                        <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK />
+                        <div style={{
+                          background: "#061812", borderTop: "1px dashed #1a5c33", borderBottom: "1px dashed #1a5c33",
+                          padding: "7px 14px", display: "flex", justifyContent: "center", alignItems: "center", gap: 10,
+                        }}>
+                          <span style={{ fontSize: 11, color: "#4ade80", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>↕ HALVTID</span>
+                          {fmt.hasGK && <span style={{ fontSize: 10, color: "#475569" }}>MV stannar · alla utespelare byts</span>}
+                        </div>
+                        <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
+                        <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK />
+                      </>
+                    ) : (
+                      <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK />
+                    )}
+
+                    {/* Bench row */}
+                    {period.bench.length > 0 && (
+                      <div style={{ background: "#111827", borderTop: "1px solid #1e293b", padding: "8px 14px" }}>
+                        <div style={{ fontSize: 9, color: "#334155", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7, fontWeight: 600 }}>
+                          Hel period på bänken
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {period.bench.map(id => <Chip key={id} id={id} small />)}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
+            <div style={{ marginBottom: 24 }} />
 
             {/* ─── Playing time summary ─── */}
             <div style={{ ...S.card, padding: "16px" }}>
