@@ -681,7 +681,7 @@ export default function App() {
                       if (prev) document.getElementById(`player-name-${prev.id}`)?.focus();
                     }
                   }}
-                  style={{ flex: 1, minWidth: 0, background: "none", border: "none", color: "#e2e8f0", fontSize: 15, fontWeight: 500, outline: "none" }}
+                  style={{ flex: 1, minWidth: 0, background: "#0f172a", border: "1px solid #334155", borderRadius: 6, color: "#e2e8f0", fontSize: 15, fontWeight: 500, outline: "none", padding: "3px 7px" }}
                 />
 
                 <button
@@ -995,8 +995,9 @@ export default function App() {
                   {/* Scoreboard */}
                   <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #1e293b", display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, textAlign: "center" }}>
-                      <input value={homeTeam} onChange={e => setHomeTeam(e.target.value)} placeholder="Hemmalag"
-                        style={{ width: "100%", background: "none", border: "none", borderBottom: "1px solid #1e293b", color: "#e2e8f0", fontSize: 16, fontWeight: 600, textAlign: "center", outline: "none", paddingBottom: 4, marginBottom: 10 }} />
+                      <div style={{ fontSize: 9, color: "#475569", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Hemma</div>
+                      <input value={homeTeam} onChange={e => setHomeTeam(e.target.value)} placeholder="Lagnamn"
+                        style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 15, fontWeight: 600, textAlign: "center", outline: "none", padding: "5px 6px", marginBottom: 10 }} />
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
                         <button onClick={() => setHomeScore(s => Math.max(0, s - 1))} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
                         <span style={{ fontFamily: "'Bebas Neue'", fontSize: 44, color: "#e2e8f0", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{homeScore}</span>
@@ -1005,8 +1006,9 @@ export default function App() {
                     </div>
                     <div style={{ fontFamily: "'Bebas Neue'", fontSize: 32, color: "#334155", flexShrink: 0, paddingTop: 24 }}>—</div>
                     <div style={{ flex: 1, textAlign: "center" }}>
-                      <input value={awayTeam} onChange={e => setAwayTeam(e.target.value)} placeholder="Bortalag"
-                        style={{ width: "100%", background: "none", border: "none", borderBottom: "1px solid #1e293b", color: "#e2e8f0", fontSize: 16, fontWeight: 600, textAlign: "center", outline: "none", paddingBottom: 4, marginBottom: 10 }} />
+                      <div style={{ fontSize: 9, color: "#475569", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Borta</div>
+                      <input value={awayTeam} onChange={e => setAwayTeam(e.target.value)} placeholder="Lagnamn"
+                        style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 15, fontWeight: 600, textAlign: "center", outline: "none", padding: "5px 6px", marginBottom: 10 }} />
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
                         <button onClick={() => setAwayScore(s => Math.max(0, s - 1))} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
                         <span style={{ fontFamily: "'Bebas Neue'", fontSize: 44, color: "#e2e8f0", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{awayScore}</span>
