@@ -151,6 +151,10 @@ export default function App() {
   const [timerElapsed, setTimerElapsed] = useState(0); // seconds
   const [timerPeriod,  setTimerPeriod]  = useState(0); // 0-indexed
   const timerRef = useRef(null);
+  const [homeTeam,  setHomeTeam]  = useState(initFromURL?.homeTeam  ?? "");
+  const [awayTeam,  setAwayTeam]  = useState(initFromURL?.awayTeam  ?? "");
+  const [homeScore, setHomeScore] = useState(initFromURL?.homeScore ?? 0);
+  const [awayScore, setAwayScore] = useState(initFromURL?.awayScore ?? 0);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -162,10 +166,10 @@ export default function App() {
 
   useEffect(() => {
     try {
-      const encoded = btoa(encodeURIComponent(JSON.stringify({ players, settings, plan, tab })));
+      const encoded = btoa(encodeURIComponent(JSON.stringify({ players, settings, plan, tab, homeTeam, awayTeam, homeScore, awayScore })));
       window.history.replaceState(null, "", "#" + encoded);
     } catch {}
-  }, [players, settings, plan, tab]);
+  }, [players, settings, plan, tab, homeTeam, awayTeam, homeScore, awayScore]);
 
   useEffect(() => {
     const h = () => setWinW(window.innerWidth);
@@ -850,6 +854,34 @@ export default function App() {
                       <SkipForward size={15} />
                     </button>
                   </div>
+
+                  {/* Scoreboard */}
+                  {(() => {
+                    const ScoreCol = ({ team, setTeam, placeholder, score, setScore }) => (
+                      <div style={{ flex: 1, textAlign: "center" }}>
+                        <input
+                          value={team}
+                          onChange={e => setTeam(e.target.value)}
+                          placeholder={placeholder}
+                          style={{ width: "100%", background: "none", border: "none", borderBottom: "1px solid #1e293b", color: "#e2e8f0", fontSize: 13, fontWeight: 600, textAlign: "center", outline: "none", paddingBottom: 4, marginBottom: 10 }}
+                        />
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                          <button onClick={() => setScore(s => Math.max(0, s - 1))}
+                            style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 44, color: "#e2e8f0", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{score}</span>
+                          <button onClick={() => setScore(s => s + 1)}
+                            style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                        </div>
+                      </div>
+                    );
+                    return (
+                      <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #1e293b", display: "flex", alignItems: "center", gap: 8 }}>
+                        <ScoreCol team={homeTeam} setTeam={setHomeTeam} placeholder="Hemmalag" score={homeScore} setScore={setHomeScore} />
+                        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 32, color: "#334155", flexShrink: 0, paddingTop: 24 }}>—</div>
+                        <ScoreCol team={awayTeam} setTeam={setAwayTeam} placeholder="Bortalag" score={awayScore} setScore={setAwayScore} />
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })()}
