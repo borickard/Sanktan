@@ -491,10 +491,10 @@ export default function App() {
         }}
       >
         {activeGK && (
-          <span style={{ fontSize: 10, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
+          <span style={{ fontSize: 11, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
         )}
         {p.isGK && !inGKSlot && (
-          <span style={{ fontSize: 9, color: "#475569", fontWeight: 600 }}>mv</span>
+          <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>mv</span>
         )}
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
       </div>
@@ -502,7 +502,7 @@ export default function App() {
   };
 
   const HalfLabel = ({ text }) => (
-    <div style={{ fontSize: 9, color: "#4ade80", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", padding: "10px 0 8px", fontWeight: 700, opacity: 0.75 }}>
+    <div style={{ fontSize: 11, color: "#4ade80", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", padding: "10px 0 8px", fontWeight: 700, opacity: 0.85 }}>
       {text}
     </div>
   );
@@ -514,7 +514,7 @@ export default function App() {
     }}>
       <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(180deg, transparent 0px, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px)", pointerEvents: "none" }} />
       <div style={{ marginBottom: 4 }}>
-        <div style={{ fontSize: 9, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Zap size={9} /> Anfallszon</div>
+        <div style={{ fontSize: 11, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Zap size={11} /> Anfallszon</div>
         <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
           {att.map((id, j) => <PositionSlot key={j} id={id} label={`Anfall ${j + 1}`} periodIdx={periodIdx} />)}
         </div>
@@ -525,7 +525,7 @@ export default function App() {
       </div>
       {fmt.mid > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 9, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Layers size={9} /> Mittfält</div>
+          <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Layers size={11} /> Mittfält</div>
           <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
             {(mid ?? []).map((id, j) => <PositionSlot key={j} id={id} label={`Mitt ${j + 1}`} periodIdx={periodIdx} />)}
           </div>
@@ -535,7 +535,7 @@ export default function App() {
         <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
           {def.map((id, j) => <PositionSlot key={j} id={id} label={`Försvar ${j + 1}`} periodIdx={periodIdx} />)}
         </div>
-        <div style={{ fontSize: 9, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={9} /> Försvarszon</div>
+        <div style={{ fontSize: 11, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={11} /> Försvarszon</div>
       </div>
       {showGK && fmt.hasGK && (
         <>
@@ -550,7 +550,7 @@ export default function App() {
 
   const PositionSlot = ({ id, label, periodIdx }) => (
     <div style={{ textAlign: "center", flex: "1 1 0", minWidth: 0, maxWidth: 120 }}>
-      <div style={{ fontSize: 9, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5, fontWeight: 600 }}>
+      <div style={{ fontSize: 11, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5, fontWeight: 600 }}>
         {label}
       </div>
       {id
@@ -594,7 +594,7 @@ export default function App() {
         <div style={{ fontFamily: "'Bebas Neue'", fontSize: "clamp(20px, 7vw, 30px)", letterSpacing: 2, color: "#f8fafc", lineHeight: 1 }}>
           {homeTeam && awayTeam ? `${homeTeam} – ${awayTeam}` : homeTeam || awayTeam || "Laguppställning"} {settings.format}
         </div>
-        <div style={{ fontSize: 11, color: "#475569", marginTop: 4, lineHeight: 1.6 }}>
+        <div style={{ fontSize: 13, color: "#64748b", marginTop: 4, lineHeight: 1.6 }}>
           {activePlayers.length}/{players.length} sp &nbsp;·&nbsp; {settings.periods} per &nbsp;·&nbsp; {settings.duration} min &nbsp;·&nbsp; {settings.subs} byte
         </div>
       </div>
@@ -617,7 +617,7 @@ export default function App() {
         {/* ═══ PLAYERS TAB ═══ */}
         {tab === "players" && (
           <div>
-            <div style={{ fontSize: 11, color: "#475569", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>
+            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>
               Tryck för att redigera · MV = Målvakt
             </div>
 
@@ -644,7 +644,7 @@ export default function App() {
                   outline: dragOverIdx === i ? "2px solid #4ade80" : "none",
                   outlineOffset: 2, cursor: "grab",
                 }}>
-                <GripVertical size={14} color="#334155" style={{ flexShrink: 0, cursor: "grab" }} />
+                <GripVertical size={16} color="#64748b" style={{ flexShrink: 0, cursor: "grab" }} />
                 <button
                   onClick={() => updP(p.id, "enabled", p.enabled === false)}
                   title={p.enabled !== false ? "Avaktivera (ej med idag)" : "Aktivera"}
@@ -687,7 +687,7 @@ export default function App() {
 
                 <button
                   onClick={() => updP(p.id, "isGK", !p.isGK)}
-                  style={{ ...S.btn(p.isGK ? "primary" : "ghost"), padding: "3px 8px", fontSize: 11, borderRadius: 6, border: p.isGK ? "none" : "1px solid #334155" }}>
+                  style={{ ...S.btn(p.isGK ? "primary" : "ghost"), padding: "3px 8px", fontSize: 12, borderRadius: 6, border: p.isGK ? "none" : "1px solid #334155" }}>
                   MV
                 </button>
 
@@ -699,7 +699,7 @@ export default function App() {
                         background: p.pref === pr.key ? pr.color : "#1a2940",
                         border: "none", borderRadius: 6, padding: "3px 7px",
                         fontSize: 12, cursor: "pointer", transition: "all 0.15s",
-                        color: p.pref === pr.key ? (pr.key === "neutral" ? "#0f172a" : "#fff") : "#475569",
+                        color: p.pref === pr.key ? (pr.key === "neutral" ? "#0f172a" : "#fff") : "#64748b",
                         display: "inline-flex", alignItems: "center",
                       }}>
                       <pr.Icon size={12} />
@@ -708,7 +708,7 @@ export default function App() {
                 </div>
 
                 <button onClick={() => delP(p.id)}
-                  style={{ background: "none", border: "none", color: "#334155", cursor: "pointer", padding: "0 2px", display: "inline-flex", alignItems: "center" }}>
+                  style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", padding: "0 2px", display: "inline-flex", alignItems: "center" }}>
                   <X size={14} />
                 </button>
               </div>
@@ -735,7 +735,7 @@ export default function App() {
 
             {/* Legend */}
             <div style={{ ...S.card, padding: "10px 14px", marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Preferenser</div>
+              <div style={{ fontSize: 12, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Preferenser</div>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                 {PREFS.map(pr => (
                   <div key={pr.key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -752,7 +752,7 @@ export default function App() {
 
             {/* Settings */}
             <div style={{ ...S.card, padding: "14px" }}>
-              <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
                 Matchinställningar
               </div>
 
@@ -819,9 +819,9 @@ export default function App() {
 
         {/* ═══ PLAN TAB ═══ */}
         {tab === "plan" && !plan && (
-          <div style={{ textAlign: "center", padding: "50px 20px", color: "#475569" }}>
+          <div style={{ textAlign: "center", padding: "50px 20px", color: "#64748b" }}>
             <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
-              <ClipboardList size={48} color="#475569" />
+              <ClipboardList size={48} color="#64748b" />
             </div>
             <div style={{ marginBottom: 20, fontSize: 15 }}>Ingen matchplan skapad ännu.</div>
             <button onClick={() => setTab("players")}
@@ -866,7 +866,7 @@ export default function App() {
                     <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "#1e293b", boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}>
                       <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <span style={{ fontFamily: "'Bebas Neue'", fontSize: 12, letterSpacing: 2, color: "#475569", flexShrink: 0 }}>
+                          <span style={{ fontFamily: "'Bebas Neue'", fontSize: 14, letterSpacing: 2, color: "#94a3b8", flexShrink: 0 }}>
                             {`P${clampedPeriod + 1}/${plan.length}`}
                           </span>
                           <span style={{ fontFamily: "'Bebas Neue'", fontSize: 38, letterSpacing: 3, color: timeColor, lineHeight: 1, flex: 1 }}>
@@ -891,7 +891,7 @@ export default function App() {
                                 style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 6, width: 28, height: 28, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
                               <div style={{ textAlign: "center", minWidth: 44 }}>
                                 <div style={{ fontFamily: "'Bebas Neue'", fontSize: 34, color: "#e2e8f0", lineHeight: 1 }}>{score}</div>
-                                <div style={{ fontSize: 10, color: "#475569", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 70 }}>{name}</div>
+                                <div style={{ fontSize: 12, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 70 }}>{name}</div>
                               </div>
                               <button onClick={() => setScore(s => s + 1)}
                                 style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 6, width: 28, height: 28, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
@@ -900,7 +900,7 @@ export default function App() {
                           return (
                             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                               <Sc score={homeScore} setScore={setHomeScore} name={homeTeam || "Hemmalag"} />
-                              <div style={{ fontFamily: "'Bebas Neue'", fontSize: 22, color: "#334155", flexShrink: 0 }}>—</div>
+                              <div style={{ fontFamily: "'Bebas Neue'", fontSize: 22, color: "#64748b", flexShrink: 0 }}>—</div>
                               <Sc score={awayScore} setScore={setAwayScore} name={awayTeam || "Bortalag"} />
                             </div>
                           );
@@ -914,8 +914,8 @@ export default function App() {
                     <div style={{ ...S.card, boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}>
                   <div style={{ padding: "16px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={{ fontFamily: "'Bebas Neue'", fontSize: 15, letterSpacing: 2, color: "#475569" }}>TIMER</div>
-                    <div style={{ fontSize: 12, color: "#475569" }}>Period {clampedPeriod + 1} / {plan.length}</div>
+                    <div style={{ fontFamily: "'Bebas Neue'", fontSize: 15, letterSpacing: 2, color: "#64748b" }}>TIMER</div>
+                    <div style={{ fontSize: 13, color: "#94a3b8" }}>Period {clampedPeriod + 1} / {plan.length}</div>
                   </div>
 
                   {/* Big time display */}
@@ -923,7 +923,7 @@ export default function App() {
                     <span style={{ fontFamily: "'Bebas Neue'", fontSize: 60, letterSpacing: 4, color: timeColor, lineHeight: 1, transition: "color 0.3s" }}>
                       {fmtTime(timerElapsed)}
                     </span>
-                    <span style={{ fontSize: 12, color: "#334155", marginLeft: 6 }}>/ {settings.duration}:00</span>
+                    <span style={{ fontSize: 13, color: "#64748b", marginLeft: 6 }}>/ {settings.duration}:00</span>
                   </div>
 
                   {/* Progress bar */}
@@ -941,8 +941,8 @@ export default function App() {
                     <div style={{ background: barColor, width: `${barPct}%`, height: "100%", borderRadius: 6, transition: "width 0.8s linear, background 0.3s", pointerEvents: "none" }} />
                   </div>
                   {settings.subs >= 1 && (
-                    <div style={{ fontSize: 9, color: "#334155", textAlign: "center", marginBottom: 10, letterSpacing: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}>
-                      <ArrowUpDown size={9} /> byte vid {Math.round(settings.duration / 2)} min
+                    <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", marginBottom: 10, letterSpacing: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}>
+                      <ArrowUpDown size={12} /> byte vid {Math.round(settings.duration / 2)} min
                     </div>
                   )}
 
@@ -997,7 +997,7 @@ export default function App() {
                   {/* Scoreboard */}
                   <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #1e293b", display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, textAlign: "center" }}>
-                      <div style={{ fontSize: 9, color: "#475569", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Hemma</div>
+                      <div style={{ fontSize: 11, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Hemma</div>
                       <input id="home-team-input" value={homeTeam} onChange={e => setHomeTeam(e.target.value)} placeholder="Lagnamn"
                         onKeyDown={e => { if (e.key === "Tab" && !e.shiftKey) { e.preventDefault(); document.getElementById("away-team-input")?.focus(); } }}
                         style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 15, fontWeight: 600, textAlign: "center", outline: "none", padding: "5px 6px", marginBottom: 10 }} />
@@ -1007,9 +1007,9 @@ export default function App() {
                         <button onClick={() => setHomeScore(s => s + 1)} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                       </div>
                     </div>
-                    <div style={{ fontFamily: "'Bebas Neue'", fontSize: 32, color: "#334155", flexShrink: 0, paddingTop: 24 }}>—</div>
+                    <div style={{ fontFamily: "'Bebas Neue'", fontSize: 32, color: "#64748b", flexShrink: 0, paddingTop: 24 }}>—</div>
                     <div style={{ flex: 1, textAlign: "center" }}>
-                      <div style={{ fontSize: 9, color: "#475569", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Borta</div>
+                      <div style={{ fontSize: 11, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Borta</div>
                       <input id="away-team-input" value={awayTeam} onChange={e => setAwayTeam(e.target.value)} placeholder="Lagnamn"
                         style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 15, fontWeight: 600, textAlign: "center", outline: "none", padding: "5px 6px", marginBottom: 10 }} />
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
@@ -1045,7 +1045,7 @@ export default function App() {
                   {!isDesktop && i > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "24px 0 20px" }}>
                       <div style={{ flex: 1, height: 1, background: "#1e293b" }} />
-                      <div style={{ fontSize: 9, color: "#334155", textTransform: "uppercase", letterSpacing: 3, fontWeight: 600 }}>paus</div>
+                      <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 3, fontWeight: 600 }}>paus</div>
                       <div style={{ flex: 1, height: 1, background: "#1e293b" }} />
                     </div>
                   )}
@@ -1084,8 +1084,8 @@ export default function App() {
                           padding: "0 14px", background: "#061812",
                           borderLeft: "1px dashed #1a5c33", borderRight: "1px dashed #1a5c33",
                         }}>
-                          <span style={{ fontSize: 10, color: "#4ade80", fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", writingMode: "vertical-lr", transform: "rotate(180deg)" }}>HALVTID</span>
-                          {fmt.hasGK && <span style={{ fontSize: 9, color: "#475569", writingMode: "vertical-lr", transform: "rotate(180deg)", marginTop: 8 }}>MV stannar</span>}
+                          <span style={{ fontSize: 12, color: "#4ade80", fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", writingMode: "vertical-lr", transform: "rotate(180deg)" }}>HALVTID</span>
+                          {fmt.hasGK && <span style={{ fontSize: 11, color: "#94a3b8", writingMode: "vertical-lr", transform: "rotate(180deg)", marginTop: 8 }}>MV stannar</span>}
                         </div>
                         <div style={{ flex: 1, minWidth: 0, ...halfDim(half2Lit) }}>
                           <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
@@ -1103,8 +1103,8 @@ export default function App() {
                           background: "#061812", borderTop: "1px dashed #1a5c33", borderBottom: "1px dashed #1a5c33",
                           padding: "7px 14px", display: "flex", justifyContent: "center", alignItems: "center", gap: 10,
                         }}>
-                          <span style={{ fontSize: 11, color: "#4ade80", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", display: "inline-flex", alignItems: "center", gap: 5 }}><ArrowUpDown size={11} /> HALVTID</span>
-                          {fmt.hasGK && <span style={{ fontSize: 10, color: "#475569" }}>MV stannar · alla utespelare byts</span>}
+                          <span style={{ fontSize: 13, color: "#4ade80", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", display: "inline-flex", alignItems: "center", gap: 5 }}><ArrowUpDown size={13} /> HALVTID</span>
+                          {fmt.hasGK && <span style={{ fontSize: 12, color: "#94a3b8" }}>MV stannar · alla utespelare byts</span>}
                         </div>
                         <div style={halfDim(half2Lit)}>
                           <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
@@ -1118,7 +1118,7 @@ export default function App() {
                     {/* Bench row */}
                     {period.bench.length > 0 && (
                       <div style={{ background: "#111827", borderTop: "1px solid #1e293b", padding: "8px 14px" }}>
-                        <div style={{ fontSize: 9, color: "#334155", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7, fontWeight: 600 }}>
+                        <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7, fontWeight: 600 }}>
                           Hel period på bänken
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -1157,7 +1157,7 @@ export default function App() {
                     ps.att   > 0 && { key: "att",   label: null,   Icon: Zap,     count: ps.att,   bg: "#f9731626", color: "#f97316" },
                     ps.mid   > 0 && { key: "mid",   label: null,   Icon: Shuffle, count: ps.mid,   bg: "#94a3b826", color: "#94a3b8" },
                     ps.def   > 0 && { key: "def",   label: null,   Icon: Shield,  count: ps.def,   bg: "#60a5fa26", color: "#60a5fa" },
-                    ps.bench > 0 && { key: "bench", label: "Bänk", Icon: null,    count: ps.bench, bg: "#1e293b",   color: "#475569" },
+                    ps.bench > 0 && { key: "bench", label: "Bänk", Icon: null,    count: ps.bench, bg: "#1e293b",   color: "#64748b" },
                   ].filter(Boolean);
 
                   return (
@@ -1165,7 +1165,7 @@ export default function App() {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           {p.isGK
-                            ? <span style={{ fontSize: 10, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
+                            ? <span style={{ fontSize: 11, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
                             : <pref.Icon size={12} color={pref.color} />
                           }
                           <span style={{ fontSize: 13, color: "#cbd5e1" }}>{p.name}</span>
@@ -1177,11 +1177,11 @@ export default function App() {
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 5 }}>
                         {posBadges.map(b => (
                           <span key={b.key} style={{
-                            fontSize: 10, fontWeight: 600, borderRadius: 5,
+                            fontSize: 11, fontWeight: 600, borderRadius: 5,
                             padding: "2px 6px", background: b.bg, color: b.color,
                             display: "inline-flex", alignItems: "center", gap: 3,
                           }}>
-                            {b.Icon ? <b.Icon size={9} /> : b.label} ×{b.count}
+                            {b.Icon ? <b.Icon size={11} /> : b.label} ×{b.count}
                           </span>
                         ))}
                       </div>
