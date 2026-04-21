@@ -199,12 +199,9 @@ export default function App() {
   useEffect(() => {
     const el = timerSentinelRef.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => setTimerCompact(!entry.isIntersecting),
-      { threshold: 0 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
+    const h = () => setTimerCompact(el.getBoundingClientRect().top < 0);
+    window.addEventListener("scroll", h, { passive: true });
+    return () => window.removeEventListener("scroll", h);
   }, [tab, plan]);
 
   useEffect(() => {
