@@ -553,62 +553,6 @@ export default function App() {
               </div>
             ))}
 
-            {/* Position proposal */}
-            {(() => {
-              const gks = fmt.hasGK ? activePlayers.filter(p => p.isGK) : [];
-              const field = activePlayers.filter(p => !(fmt.hasGK && p.isGK));
-              const byPref = {
-                attack:  field.filter(p => p.pref === "attack"),
-                neutral: field.filter(p => p.pref === "neutral"),
-                defense: field.filter(p => p.pref === "defense"),
-              };
-              const rows = [
-                { pref: "attack",  label: "Anfall",   slots: fmt.att },
-                ...(fmt.mid > 0 ? [{ pref: "neutral", label: "Mittfält", slots: fmt.mid }] : []),
-                { pref: "defense", label: "Försvar",  slots: fmt.def },
-              ];
-              return (
-                <div style={{ ...S.card, padding: "12px 14px", marginTop: 4, marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
-                    Föreslagen rollfördelning &nbsp;·&nbsp; {activePlayers.length} aktiva
-                  </div>
-                  {fmt.hasGK && (
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 7 }}>
-                      <span style={{ fontSize: 10, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700, flexShrink: 0 }}>MV</span>
-                      <span style={{ fontSize: 10, color: "#334155", minWidth: 55, flexShrink: 0 }}>1 plats</span>
-                      <span style={{ fontSize: 12, color: gks.length > 0 ? "#cbd5e1" : "#475569" }}>
-                        {gks.length > 0 ? gks.map(p => p.name).join(", ") : "Ingen utsedd målvakt"}
-                      </span>
-                    </div>
-                  )}
-                  {rows.map(({ pref, label, slots }) => {
-                    const pr = PM[pref];
-                    const matched = byPref[pref];
-                    const extra = matched.length - slots;
-                    return (
-                      <div key={pref} style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
-                        <span style={{ fontSize: 11, color: pr.color, fontWeight: 600, minWidth: 70, flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                          <pr.Icon size={11} /> {label}
-                        </span>
-                        <span style={{ fontSize: 10, color: "#334155", minWidth: 55, flexShrink: 0 }}>
-                          {slots} plats{slots !== 1 ? "er" : ""}
-                        </span>
-                        <span style={{ fontSize: 12, color: matched.length > 0 ? "#cbd5e1" : "#334155", flex: 1, minWidth: 0 }}>
-                          {matched.length > 0 ? matched.map(p => p.name).join(", ") : "—"}
-                          {extra > 0 && <span style={{ color: "#f87171", fontSize: 10 }}> +{extra} extra</span>}
-                          {extra < 0 && <span style={{ color: "#fbbf24", fontSize: 10 }}> {Math.abs(extra)} fylls</span>}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {settings.subs >= 1 && (
-                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #1e3a5f", fontSize: 11, color: "#475569", display: "flex", alignItems: "center", gap: 5 }}>
-                      <ArrowUpDown size={11} /> {settings.subs} byte per period — spelarna roterar in halvvägs
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
 
             {/* Add player */}
             <div style={{ display: "flex", gap: 8, marginTop: 4, marginBottom: 16 }}>
