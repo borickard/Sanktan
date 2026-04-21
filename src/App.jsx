@@ -3,7 +3,7 @@ import {
   Zap, Shuffle, Shield, Layers,
   Play, Pause, RotateCcw, RefreshCw, SkipBack, SkipForward,
   ArrowUpDown, AlertTriangle, Link2, X, Check,
-  Users, ClipboardList, Pencil, ChevronRight,
+  Users, ClipboardList, Pencil, ChevronRight, GripVertical,
 } from "lucide-react";
 
 /* ─── ID factory ─── */
@@ -113,8 +113,21 @@ function generatePlan(players, settings) {
       const HALF = FULL / 2;
       const take = Math.min(fieldCount * 2, avail.length);
       const selected  = avail.slice(0, take);
-      const firstHalf  = selected.slice(0, fieldCount);
-      const secondHalf = selected.slice(fieldCount);
+      /* Spread attackers/defenders across both halves so each half gets
+         proportional pref coverage instead of all attackers in one half. */
+      const h1 = [], h2 = [];
+      const byPref = ["attack", "defense", "neutral", "gk"].map(
+        pr => selected.filter(p => p.pref === pr || (pr === "neutral" && p.pref !== "attack" && p.pref !== "defense"))
+      );
+      for (const group of byPref) {
+        group.forEach((p, i) => {
+          if (h1.length < fieldCount && (i % 2 === 0 || h2.length >= fieldCount)) h1.push(p);
+          else if (h2.length < fieldCount) h2.push(p);
+          else h1.push(p);
+        });
+      }
+      const firstHalf  = h1;
+      const secondHalf = h2;
       const bench = avail.slice(take);
 
       const pos1 = fillPositions(firstHalf,  'att');
@@ -168,6 +181,8 @@ export default function App() {
   const [timerElapsed, setTimerElapsed] = useState(0); // seconds
   const [timerPeriod,  setTimerPeriod]  = useState(0); // 0-indexed
   const timerRef = useRef(null);
+  const dragIdx  = useRef(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
   const timerSentinelRef = useRef(null);
   const [timerCompact, setTimerCompact] = useState(false);
   const [homeTeam,  setHomeTeam]  = useState(initFromURL?.homeTeam  ?? "");
@@ -510,8 +525,30 @@ export default function App() {
               Tryck för att redigera · MV = Målvakt
             </div>
 
-            {players.map(p => (
-              <div key={p.id} style={{ ...S.card, padding: "10px 12px", display: "flex", alignItems: "center", gap: 6, opacity: p.enabled !== false ? 1 : 0.42, transition: "opacity 0.15s" }}>
+            {players.map((p, i) => (
+              <div
+                key={p.id}
+                draggable
+                onDragStart={() => { dragIdx.current = i; }}
+                onDragOver={e => { e.preventDefault(); setDragOverIdx(i); }}
+                onDrop={e => {
+                  e.preventDefault();
+                  const from = dragIdx.current;
+                  if (from === null || from === i) { setDragOverIdx(null); return; }
+                  const next = [...players];
+                  next.splice(i, 0, next.splice(from, 1)[0]);
+                  setPlayers(next);
+                  dragIdx.current = null;
+                  setDragOverIdx(null);
+                }}
+                onDragEnd={() => { dragIdx.current = null; setDragOverIdx(null); }}
+                style={{
+                  ...S.card, padding: "10px 12px", display: "flex", alignItems: "center", gap: 6,
+                  opacity: dragIdx.current === i ? 0.4 : (p.enabled !== false ? 1 : 0.42),
+                  outline: dragOverIdx === i ? "2px solid #4ade80" : "none",
+                  outlineOffset: 2, cursor: "grab",
+                }}>
+                <GripVertical size={14} color="#334155" style={{ flexShrink: 0, cursor: "grab" }} />
                 <button
                   onClick={() => updP(p.id, "enabled", p.enabled === false)}
                   title={p.enabled !== false ? "Avaktivera (ej med idag)" : "Aktivera"}
