@@ -277,6 +277,7 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied,  setShareCopied]  = useState(false);
+  const [shareError,   setShareError]   = useState(null);
   const [kvLoading, setKvLoading] = useState(isShortCode);
   const [winW, setWinW]     = useState(window.innerWidth);
   const [timerRunning, setTimerRunning] = useState(false);
@@ -325,6 +326,7 @@ export default function App() {
 
   const shareLink = useCallback(async () => {
     setShareLoading(true);
+    setShareError(null);
     try {
       const state = _enc(JSON.stringify(packURL({ players, settings, homeTeam, awayTeam, homeScore, awayScore })));
       const res = await fetch("/api/save", {
@@ -332,11 +334,22 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ state }),
       });
+      if (!res.ok) throw new Error(`API ${res.status}`);
       const { code } = await res.json();
-      await navigator.clipboard.writeText(`${window.location.origin}?c=${code}`);
-      setShareCopied(true);
-      setTimeout(() => setShareCopied(false), 2500);
-    } catch {}
+      if (!code) throw new Error("no code returned");
+      const url = `${window.location.origin}?c=${code}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2500);
+      } catch {
+        // Clipboard blocked — show URL in prompt as fallback
+        window.prompt("Kopiera länken:", url);
+      }
+    } catch (err) {
+      setShareError(err.message ?? "Fel");
+      setTimeout(() => setShareError(null), 4000);
+    }
     setShareLoading(false);
   }, [players, settings, homeTeam, awayTeam, homeScore, awayScore]);
 
@@ -893,8 +906,8 @@ export default function App() {
               </button>
             )}
             <button onClick={shareLink} disabled={shareLoading}
-              style={{ ...S.btn(shareCopied ? "primary" : "secondary"), width: "100%", marginTop: 8, padding: "9px 0", fontSize: 13 }}>
-              {shareCopied ? <><Check size={13} /> Länk kopierad!</> : shareLoading ? "Skapar länk…" : <><Link2 size={13} /> Dela kort länk</>}
+              style={{ ...S.btn(shareCopied ? "primary" : shareError ? "ghost" : "secondary"), width: "100%", marginTop: 8, padding: "9px 0", fontSize: 13, color: shareError ? "#f87171" : undefined }}>
+              {shareCopied ? <><Check size={13} /> Länk kopierad!</> : shareLoading ? "Skapar länk…" : shareError ? `Fel: ${shareError}` : <><Link2 size={13} /> Dela kort länk</>}
             </button>
           </div>
         )}
