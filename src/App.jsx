@@ -70,11 +70,15 @@ const unpackURL = c => {
 };
 
 /* ─── URL state ─── */
+const SHORT_CODE_RE = /^[A-Z2-9]{6}$/i;
+const urlParam = window.location.search.slice(1);
+const isShortCode = SHORT_CODE_RE.test(urlParam);
+
 const initFromURL = (() => {
+  if (isShortCode) return null; // loaded async in component
   try {
-    const raw = window.location.search.slice(1);
-    if (!raw) return null;
-    const data = JSON.parse(_dec(raw));
+    if (!urlParam) return null;
+    const data = JSON.parse(_dec(urlParam));
     if (Array.isArray(data?.p) && Array.isArray(data?.s)) return unpackURL(data);
     if (data?.players && data?.settings) return data; // legacy fallback
   } catch {}
@@ -271,6 +275,9 @@ export default function App() {
   const [originalPlan, setOriginalPlan] = useState(() => initFromURL ? generatePlan(initFromURL.players, initFromURL.settings) : null);
   const [sel, setSel]           = useState(null);
   const [copied, setCopied] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareCopied,  setShareCopied]  = useState(false);
+  const [kvLoading, setKvLoading] = useState(isShortCode);
   const [winW, setWinW]     = useState(window.innerWidth);
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerElapsed, setTimerElapsed] = useState(0); // seconds
@@ -294,6 +301,44 @@ export default function App() {
     document.head.appendChild(link);
     return () => { try { document.head.removeChild(link); } catch(e) {} };
   }, []);
+
+  // Load state from KV when a short code is in the URL
+  useEffect(() => {
+    if (!isShortCode) return;
+    fetch(`/api/load?c=${urlParam}`)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(({ state }) => {
+        const unpacked = unpackURL(JSON.parse(_dec(state)));
+        setPlayers(unpacked.players);
+        setSettings(s => ({ ...s, ...unpacked.settings }));
+        setHomeTeam(unpacked.homeTeam);
+        setAwayTeam(unpacked.awayTeam);
+        setHomeScore(unpacked.homeScore);
+        setAwayScore(unpacked.awayScore);
+        const p = generatePlan(unpacked.players, unpacked.settings);
+        setPlan(p); setOriginalPlan(p);
+        setTab("plan");
+      })
+      .catch(() => {})
+      .finally(() => setKvLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const shareLink = useCallback(async () => {
+    setShareLoading(true);
+    try {
+      const state = _enc(JSON.stringify(packURL({ players, settings, homeTeam, awayTeam, homeScore, awayScore })));
+      const res = await fetch("/api/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state }),
+      });
+      const { code } = await res.json();
+      await navigator.clipboard.writeText(`${window.location.origin}?c=${code}`);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    } catch {}
+    setShareLoading(false);
+  }, [players, settings, homeTeam, awayTeam, homeScore, awayScore]);
 
   useEffect(() => {
     try {
@@ -613,6 +658,12 @@ export default function App() {
   };
 
   /* ─── Render ─── */
+  if (kvLoading) return (
+    <div style={{ background: "#0f172a", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontFamily: "'DM Sans', system-ui, sans-serif", fontSize: 15 }}>
+      Laddar matchplan…
+    </div>
+  );
+
   return (
     <div style={S.app} onClick={() => setSel(null)}>
 
@@ -841,6 +892,10 @@ export default function App() {
                 <RotateCcw size={13} /> Återställ till original
               </button>
             )}
+            <button onClick={shareLink} disabled={shareLoading}
+              style={{ ...S.btn(shareCopied ? "primary" : "secondary"), width: "100%", marginTop: 8, padding: "9px 0", fontSize: 13 }}>
+              {shareCopied ? <><Check size={13} /> Länk kopierad!</> : shareLoading ? "Skapar länk…" : <><Link2 size={13} /> Dela kort länk</>}
+            </button>
           </div>
         )}
 
