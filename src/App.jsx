@@ -44,7 +44,7 @@ const DEMO = [
 /* ─── URL state ─── */
 const initFromURL = (() => {
   try {
-    const raw = new URLSearchParams(window.location.search).get("s");
+    const raw = window.location.search.slice(1);
     if (!raw) return null;
     const b64 = raw.replace(/-/g, "+").replace(/_/g, "/") + "===".slice(0, (4 - raw.length % 4) % 4);
     const decoded = JSON.parse(decodeURIComponent(atob(b64)));
@@ -270,7 +270,7 @@ export default function App() {
   useEffect(() => {
     try {
       const encoded = btoa(encodeURIComponent(JSON.stringify({ players, settings, plan, tab, homeTeam, awayTeam, homeScore, awayScore }))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-      window.history.replaceState(null, "", "?s=" + encoded);
+      window.history.replaceState(null, "", "?" + encoded);
     } catch {}
   }, [players, settings, plan, tab, homeTeam, awayTeam, homeScore, awayScore]);
 
