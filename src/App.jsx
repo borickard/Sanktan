@@ -44,9 +44,9 @@ const DEMO = [
 /* ─── URL state ─── */
 const initFromURL = (() => {
   try {
-    const hash = window.location.hash.slice(1);
-    if (!hash) return null;
-    const padded = hash + "===".slice((hash.length * 3) % 4);
+    const raw = new URLSearchParams(window.location.search).get("s");
+    if (!raw) return null;
+    const padded = raw + "===".slice((raw.length * 3) % 4);
     const decoded = JSON.parse(decodeURIComponent(atob(padded)));
     if (decoded?.players && decoded?.settings) return decoded;
   } catch {}
@@ -185,7 +185,7 @@ export default function App() {
   useEffect(() => {
     try {
       const encoded = btoa(encodeURIComponent(JSON.stringify({ players, settings, plan, tab, homeTeam, awayTeam, homeScore, awayScore }))).replace(/=+$/, "");
-      window.history.replaceState(null, "", "#" + encoded);
+      window.history.replaceState(null, "", "?s=" + encoded);
     } catch {}
   }, [players, settings, plan, tab, homeTeam, awayTeam, homeScore, awayScore]);
 
