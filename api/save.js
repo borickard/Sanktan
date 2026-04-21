@@ -1,4 +1,6 @@
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
+
+const redis = Redis.fromEnv();
 
 const CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous 0/O/1/I
 const genCode = () =>
@@ -15,9 +17,9 @@ export default async function handler(req, res) {
   let code;
   for (let i = 0; i < 10; i++) {
     code = genCode();
-    if (!(await kv.exists(code))) break;
+    if (!(await redis.exists(code))) break;
   }
 
-  await kv.set(code, state, { ex: 60 * 60 * 24 * 30 }); // 30-day TTL
+  await redis.set(code, state, { ex: 60 * 60 * 24 * 30 }); // 30-day TTL
   res.json({ code });
 }
