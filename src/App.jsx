@@ -204,6 +204,32 @@ function generatePlan(players, settings) {
   });
 }
 
+/* ─── Audio ─── */
+const beep = (freqs, dur, gap) => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx.resume().then(() => {
+      const master = ctx.createGain();
+      master.gain.value = 0.35;
+      master.connect(ctx.destination);
+      freqs.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const env = ctx.createGain();
+        osc.connect(env); env.connect(master);
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        const t = ctx.currentTime + i * (dur + gap);
+        env.gain.setValueAtTime(1, t);
+        env.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        osc.start(t); osc.stop(t + dur + 0.05);
+      });
+      setTimeout(() => ctx.close(), (freqs.length * (dur + gap) + 0.5) * 1000);
+    });
+  } catch (e) {}
+};
+const playSwitchSound  = () => beep([880, 880], 0.12, 0.1);
+const playPeriodEnd    = () => beep([660, 660, 660], 0.25, 0.15);
+
 /* ─── Main App ─── */
 export default function App() {
   const [tab, setTab]         = useState(initFromURL?.tab ?? "players");
@@ -221,8 +247,10 @@ export default function App() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerElapsed, setTimerElapsed] = useState(0); // seconds
   const [timerPeriod,  setTimerPeriod]  = useState(0); // 0-indexed
-  const timerRef = useRef(null);
-  const dragIdx  = useRef(null);
+  const timerRef        = useRef(null);
+  const switchSounded   = useRef(false);
+  const endSounded      = useRef(false);
+  const dragIdx         = useRef(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
   const timerSentinelRef = useRef(null);
   const [timerCompact, setTimerCompact] = useState(false);
@@ -259,6 +287,29 @@ export default function App() {
     window.addEventListener("scroll", h, { passive: true });
     return () => window.removeEventListener("scroll", h);
   }, [tab, plan]);
+
+  /* Reset sound flags when moving to a new period or resetting the timer */
+  useEffect(() => {
+    switchSounded.current = false;
+    endSounded.current    = false;
+  }, [timerPeriod]);
+
+  /* Trigger sounds when the timer crosses a threshold while running */
+  useEffect(() => {
+    if (!timerRunning) return;
+    const pSecs = settings.duration * 60;
+    const hSecs = pSecs / 2;
+    if (timerElapsed < hSecs) switchSounded.current = false;
+    if (timerElapsed < pSecs) endSounded.current    = false;
+    if (settings.subs >= 1 && timerElapsed >= hSecs && timerElapsed < pSecs && !switchSounded.current) {
+      switchSounded.current = true;
+      playSwitchSound();
+    }
+    if (timerElapsed >= pSecs && !endSounded.current) {
+      endSounded.current = true;
+      playPeriodEnd();
+    }
+  }, [timerElapsed, timerRunning, settings]);
 
   useEffect(() => {
     clearInterval(timerRef.current);
