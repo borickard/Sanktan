@@ -677,8 +677,11 @@ export default function App() {
             }}>
               GENERERA MATCHPLAN <ChevronRight size={17} />
             </button>
-
-            <ShareBar />
+            {originalPlan && (
+              <button onClick={doReset} style={{ ...S.btn("secondary"), width: "100%", marginTop: 8, padding: "9px 0", fontSize: 13 }}>
+                <RotateCcw size={13} /> Återställ till original
+              </button>
+            )}
           </div>
         )}
 
@@ -698,37 +701,14 @@ export default function App() {
 
         {tab === "plan" && plan && (
           <div>
-            {/* Swap hint banner */}
-            <div style={{
-              borderRadius: 9, padding: "9px 14px", marginBottom: 12, fontSize: 12, textAlign: "center",
-              background: sel ? "#422006" : "#0a2e1a",
-              color: sel ? "#fed7aa" : "#4ade80",
-              border: `1px solid ${sel ? "#7c2d12" : "#1a5c33"}`,
-              transition: "all 0.2s",
-            }}>
-              {sel
-                ? <>Markerat <strong>{getP(sel.id)?.name}</strong> i period {sel.periodIdx + 1} — tryck på en annan spelare i samma period för att byta.</>
-                : "Tryck på en spelare för att välja, sedan på en annan i samma period för att byta."
-              }
-            </div>
-
-            {/* Action buttons */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <button onClick={doGenerate} style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13 }}>
-                <RefreshCw size={13} /> Generera om
-              </button>
-              <button
-                onClick={doReset}
-                disabled={!originalPlan}
-                title="Återställ till den automatiskt genererade fördelningen"
-                style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13, opacity: originalPlan ? 1 : 0.4 }}>
-                <RotateCcw size={13} /> Återställ
-              </button>
-              <button onClick={() => setTab("players")} style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 13 }}>
-                <Pencil size={13} /> Redigera
-              </button>
-            </div>
-            <ShareBar />
+            {sel && (
+              <div style={{
+                borderRadius: 9, padding: "9px 14px", marginBottom: 12, fontSize: 12, textAlign: "center",
+                background: "#422006", color: "#fed7aa", border: "1px solid #7c2d12",
+              }}>
+                Markerat <strong>{getP(sel.id)?.name}</strong> i period {sel.periodIdx + 1} — tryck på en annan spelare i samma period för att byta.
+              </div>
+            )}
             <div style={{ marginBottom: 16 }} />
 
             {/* ─── Timer ─── */}
