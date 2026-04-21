@@ -62,17 +62,33 @@ function generatePlan(players, settings) {
   const gks = fmt.hasGK ? players.filter(p => p.isGK) : [];
   const mins = Object.fromEntries(players.map(p => [p.id, 0]));
 
-  const fillPositions = pool => {
+  /* neutralBonus: 'att' | 'def' — which side neutral overflow players prefer */
+  const fillPositions = (pool, neutralBonus = 'att') => {
     const at = [], md = [], df = [];
-    pool.filter(p => p.pref === "attack").forEach(p  => { if (at.length < fmt.att) at.push(p.id); });
-    pool.filter(p => p.pref === "neutral").forEach(p => { if (md.length < fmt.mid) md.push(p.id); });
-    pool.filter(p => p.pref === "defense").forEach(p => { if (df.length < fmt.def) df.push(p.id); });
-    const used = new Set([...at, ...md, ...df]);
-    pool.filter(p => !used.has(p.id)).forEach(p => {
-      if      (at.length < fmt.att) at.push(p.id);
-      else if (md.length < fmt.mid) md.push(p.id);
-      else if (df.length < fmt.def) df.push(p.id);
-    });
+    const used = new Set();
+    const place = (arr, max, id) => { if (arr.length < max) { arr.push(id); used.add(id); return true; } return false; };
+
+    /* Strict pref matching */
+    for (const p of pool) {
+      if (p.pref === "attack")  place(at, fmt.att, p.id);
+      if (p.pref === "defense") place(df, fmt.def, p.id);
+      if (p.pref === "neutral") place(md, fmt.mid, p.id);
+    }
+    /* Neutral overflow: alternate att/def to let mix players play both sides */
+    for (const p of pool.filter(p => p.pref === "neutral" && !used.has(p.id))) {
+      if (neutralBonus === 'att') {
+        place(at, fmt.att, p.id) || place(md, fmt.mid, p.id) || place(df, fmt.def, p.id);
+      } else {
+        place(df, fmt.def, p.id) || place(md, fmt.mid, p.id) || place(at, fmt.att, p.id);
+      }
+    }
+    /* Attack overflow: stay in att/mid, avoid def */
+    for (const p of pool.filter(p => p.pref === "attack" && !used.has(p.id)))
+      place(at, fmt.att, p.id) || place(md, fmt.mid, p.id) || place(df, fmt.def, p.id);
+    /* Defense overflow: stay in def/mid, avoid att */
+    for (const p of pool.filter(p => p.pref === "defense" && !used.has(p.id)))
+      place(df, fmt.def, p.id) || place(md, fmt.mid, p.id) || place(at, fmt.att, p.id);
+
     while (at.length < fmt.att) at.push(null);
     while (md.length < fmt.mid) md.push(null);
     while (df.length < fmt.def) df.push(null);
@@ -100,8 +116,8 @@ function generatePlan(players, settings) {
       const secondHalf = selected.slice(fieldCount);
       const bench = avail.slice(take);
 
-      const pos1 = fillPositions(firstHalf);
-      const pos2 = fillPositions(secondHalf);
+      const pos1 = fillPositions(firstHalf,  'att');
+      const pos2 = fillPositions(secondHalf, 'def');
 
       if (gkId) mins[gkId] += FULL;
       firstHalf.forEach(p  => { mins[p.id] += HALF; });
@@ -830,7 +846,11 @@ export default function App() {
               );
             })()}
 
+            {/* Two-column on desktop: periods left, stats right */}
+            <div style={isDesktop ? { display: "grid", gridTemplateColumns: "1fr 320px", gap: 24, alignItems: "start" } : {}}>
+
             {/* Period cards */}
+            <div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: isDesktop ? 24 : 0 }}>
               {plan.map((period, i) => (
                 <div key={i}>
@@ -919,9 +939,11 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <div style={{ marginBottom: 24 }} />
+            </div> {/* end period cards inner grid */}
+            </div> {/* end left column */}
 
-            {/* ─── Playing time summary ─── */}
+            {/* ─── Right column: Playing time summary ─── */}
+            <div style={isDesktop ? { position: "sticky", top: 0 } : { marginTop: 24 }}>
             <div style={{ ...S.card, padding: "16px" }}>
               <div style={{
                 fontFamily: "'Bebas Neue', cursive", fontSize: 20, letterSpacing: 2,
@@ -972,13 +994,18 @@ export default function App() {
                           </span>
                         ))}
                       </div>
-                      <div style={{ background: "#0f172a", borderRadius: 5, height: 6, overflow: "hidden" }}>
-                        <div style={{
-                          background: `linear-gradient(90deg, ${barColor}99, ${barColor})`,
-                          width: `${pct}%`, height: "100%", borderRadius: 5,
-                          transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)",
-                          minWidth: m > 0 ? 4 : 0,
-                        }} />
+                      <div style={{ background: "#0f172a", borderRadius: 5, height: 8, overflow: "hidden", display: "flex" }}>
+                        {[
+                          { count: ps.gk,    color: "#fbbf24" },
+                          { count: ps.att,   color: "#f97316" },
+                          { count: ps.mid,   color: "#94a3b8" },
+                          { count: ps.def,   color: "#60a5fa" },
+                          { count: ps.bench, color: "#1e3a5f" },
+                        ].map(({ count, color }, si) => {
+                          const total = (ps.gk ?? 0) + (ps.att ?? 0) + (ps.mid ?? 0) + (ps.def ?? 0) + (ps.bench ?? 0);
+                          const segPct = total > 0 ? ((count ?? 0) / total) * 100 : 0;
+                          return segPct > 0 ? <div key={si} style={{ width: `${segPct}%`, height: "100%", background: color, transition: "width 0.5s" }} /> : null;
+                        })}
                       </div>
                     </div>
                   );
@@ -1007,6 +1034,8 @@ export default function App() {
                 );
               })()}
             </div>
+            </div> {/* end right column */}
+            </div> {/* end two-column grid */}
 
           </div>
         )}
