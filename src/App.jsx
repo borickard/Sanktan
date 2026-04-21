@@ -168,6 +168,7 @@ export default function App() {
   const [timerElapsed, setTimerElapsed] = useState(0); // seconds
   const [timerPeriod,  setTimerPeriod]  = useState(0); // 0-indexed
   const timerRef = useRef(null);
+  const timerSentinelRef = useRef(null);
   const [timerCompact, setTimerCompact] = useState(false);
   const [homeTeam,  setHomeTeam]  = useState(initFromURL?.homeTeam  ?? "");
   const [awayTeam,  setAwayTeam]  = useState(initFromURL?.awayTeam  ?? "");
@@ -196,10 +197,15 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const h = () => setTimerCompact(window.scrollY > 120);
-    window.addEventListener("scroll", h, { passive: true });
-    return () => window.removeEventListener("scroll", h);
-  }, []);
+    const el = timerSentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setTimerCompact(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [tab, plan]);
 
   useEffect(() => {
     clearInterval(timerRef.current);
@@ -742,31 +748,58 @@ export default function App() {
               const reset  = () => { setTimerElapsed(0); setTimerRunning(false); };
 
               return (
-                <div style={{ ...S.card, marginBottom: 16, position: "sticky", top: 0, zIndex: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.6)", overflow: "hidden" }}>
-                  {timerCompact ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
-                      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 11, letterSpacing: 2, color: "#475569", flexShrink: 0 }}>
-                        {`P${clampedPeriod + 1}/${plan.length}`}
-                      </span>
-                      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 28, letterSpacing: 3, color: timeColor, lineHeight: 1, flexShrink: 0 }}>
-                        {fmtTime(timerElapsed)}
-                      </span>
-                      <div
-                        onClick={e => { const r = e.currentTarget.getBoundingClientRect(); const dx = e.clientX - r.left; setTimerElapsed(Math.round(dx / r.width * periodSecs)); }}
-                        style={{ flex: 1, height: 6, background: "#0f172a", borderRadius: 3, cursor: "pointer", overflow: "hidden" }}>
-                        <div style={{ width: `${barPct}%`, height: "100%", background: barColor, borderRadius: 3 }} />
+                <>
+                  <div ref={timerSentinelRef} />
+                  <div style={{ ...S.card, marginBottom: 16, position: "sticky", top: 0, zIndex: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}>
+
+                    {/* ── Compact state ── */}
+                    <div style={{ maxHeight: timerCompact ? 200 : 0, overflow: "hidden", transition: "max-height 0.3s ease" }}>
+                      <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 12, letterSpacing: 2, color: "#475569", flexShrink: 0 }}>
+                            {`P${clampedPeriod + 1}/${plan.length}`}
+                          </span>
+                          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 38, letterSpacing: 3, color: timeColor, lineHeight: 1, flex: 1 }}>
+                            {fmtTime(timerElapsed)}
+                          </span>
+                          {isSwitchDue && !isOvertime && <ArrowUpDown size={15} color="#fb923c" style={{ flexShrink: 0 }} />}
+                          {isOvertime && <AlertTriangle size={15} color="#f87171" style={{ flexShrink: 0 }} />}
+                          <button onClick={() => setTimerRunning(r => !r)}
+                            style={{ ...S.btn("primary"), padding: "7px 12px", flexShrink: 0 }}>
+                            {timerRunning ? <Pause size={14} /> : <Play size={14} />}
+                          </button>
+                        </div>
+                        <div
+                          onClick={e => { const r = e.currentTarget.getBoundingClientRect(); const dx = e.clientX - r.left; setTimerElapsed(Math.round(dx / r.width * periodSecs)); }}
+                          style={{ height: 6, background: "#0f172a", borderRadius: 3, cursor: "pointer", overflow: "hidden" }}>
+                          <div style={{ width: `${barPct}%`, height: "100%", background: barColor, borderRadius: 3, transition: "width 0.8s linear" }} />
+                        </div>
+                        {(() => {
+                          const Sc = ({ score, setScore, name }) => (
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, justifyContent: "center" }}>
+                              <button onClick={() => setScore(s => Math.max(0, s - 1))}
+                                style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 6, width: 28, height: 28, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
+                              <div style={{ textAlign: "center", minWidth: 44 }}>
+                                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 34, color: "#e2e8f0", lineHeight: 1 }}>{score}</div>
+                                <div style={{ fontSize: 10, color: "#475569", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 70 }}>{name}</div>
+                              </div>
+                              <button onClick={() => setScore(s => s + 1)}
+                                style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 6, width: 28, height: 28, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
+                            </div>
+                          );
+                          return (
+                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                              <Sc score={homeScore} setScore={setHomeScore} name={homeTeam || "Hemmalag"} />
+                              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 22, color: "#334155", flexShrink: 0 }}>—</div>
+                              <Sc score={awayScore} setScore={setAwayScore} name={awayTeam || "Bortalag"} />
+                            </div>
+                          );
+                        })()}
                       </div>
-                      {isSwitchDue && !isOvertime && <ArrowUpDown size={14} color="#fb923c" style={{ flexShrink: 0 }} />}
-                      {isOvertime && <AlertTriangle size={14} color="#f87171" style={{ flexShrink: 0 }} />}
-                      <button onClick={() => setTimerRunning(r => !r)}
-                        style={{ ...S.btn("primary"), padding: "6px 10px", flexShrink: 0 }}>
-                        {timerRunning ? <Pause size={13} /> : <Play size={13} />}
-                      </button>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#94a3b8", flexShrink: 0 }}>
-                        {homeScore}—{awayScore}
-                      </span>
                     </div>
-                  ) : (
+
+                    {/* ── Full state ── */}
+                    <div style={{ maxHeight: timerCompact ? 0 : 700, overflow: "hidden", transition: "max-height 0.35s ease" }}>
                   <div style={{ padding: "16px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 15, letterSpacing: 2, color: "#475569" }}>TIMER</div>
@@ -877,8 +910,9 @@ export default function App() {
                     );
                   })()}
                   </div>
-                  )}
-                </div>
+                    </div>
+                  </div>
+                </>
               );
             })()}
 
