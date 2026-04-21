@@ -71,14 +71,15 @@ const unpackURL = c => {
 
 /* ─── URL state ─── */
 const SHORT_CODE_RE = /^[A-Z2-9]{6}$/i;
-const urlParam = window.location.search.slice(1);
-const isShortCode = SHORT_CODE_RE.test(urlParam);
+const search = window.location.search.slice(1);
+const shortCode = new URLSearchParams(window.location.search).get("c");
+const isShortCode = !!shortCode && SHORT_CODE_RE.test(shortCode);
 
 const initFromURL = (() => {
   if (isShortCode) return null; // loaded async in component
   try {
-    if (!urlParam) return null;
-    const data = JSON.parse(_dec(urlParam));
+    if (!search) return null;
+    const data = JSON.parse(_dec(search));
     if (Array.isArray(data?.p) && Array.isArray(data?.s)) return unpackURL(data);
     if (data?.players && data?.settings) return data; // legacy fallback
   } catch {}
@@ -306,7 +307,7 @@ export default function App() {
   // Load state from KV when a short code is in the URL
   useEffect(() => {
     if (!isShortCode) return;
-    fetch(`/api/load?c=${urlParam}`)
+    fetch(`/api/load?c=${shortCode}`)
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(({ state }) => {
         const unpacked = unpackURL(JSON.parse(_dec(state)));
