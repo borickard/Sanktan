@@ -394,7 +394,7 @@ export default function App() {
   };
 
   const HalfLabel = ({ text }) => (
-    <div style={{ fontSize: 9, color: "#4ade80", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 700, opacity: 0.75 }}>
+    <div style={{ fontSize: 9, color: "#4ade80", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", padding: "10px 0 8px", fontWeight: 700, opacity: 0.75 }}>
       {text}
     </div>
   );
