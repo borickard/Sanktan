@@ -41,14 +41,42 @@ const DEMO = [
   mkP("Spelare 9", false, "defense"),
 ];
 
+/* ─── URL encoding ─── */
+// Unicode-safe: encodes non-ASCII as UTF-8 bytes but leaves ASCII chars unchanged (no inflation of {,},[,],:," etc.)
+const _enc = str => btoa(
+  encodeURIComponent(str).replace(/%([0-9A-F]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+const _dec = raw => decodeURIComponent(
+  Array.prototype.map.call(
+    atob(raw.replace(/-/g, "+").replace(/_/g, "/") + "===".slice(0, (4 - raw.length % 4) % 4)),
+    c => "%" + c.charCodeAt(0).toString(16).padStart(2, "0")
+  ).join("")
+);
+
+const packURL  = ({ players, settings, homeTeam, awayTeam, homeScore, awayScore }) => ({
+  p: players.map(p => [p.id, p.name, p.isGK ? 1 : 0, p.pref[0], p.enabled === false ? 0 : 1]),
+  s: [settings.format, settings.periods, settings.duration, settings.subs],
+  h: homeTeam, a: awayTeam, hs: homeScore, as: awayScore,
+});
+
+const unpackURL = c => {
+  const pr = { a: "attack", n: "neutral", d: "defense" };
+  return {
+    players: c.p.map(([id, name, gk, pref, en]) => ({ id, name, isGK: !!gk, pref: pr[pref] ?? "neutral", enabled: en !== 0 })),
+    settings: { format: c.s[0], periods: c.s[1], duration: c.s[2], subs: c.s[3] },
+    homeTeam: c.h ?? "", awayTeam: c.a ?? "", homeScore: c.hs ?? 0, awayScore: c.as ?? 0,
+  };
+};
+
 /* ─── URL state ─── */
 const initFromURL = (() => {
   try {
     const raw = window.location.search.slice(1);
     if (!raw) return null;
-    const b64 = raw.replace(/-/g, "+").replace(/_/g, "/") + "===".slice(0, (4 - raw.length % 4) % 4);
-    const decoded = JSON.parse(decodeURIComponent(atob(b64)));
-    if (decoded?.players && decoded?.settings) return decoded;
+    const data = JSON.parse(_dec(raw));
+    if (Array.isArray(data?.p) && Array.isArray(data?.s)) return unpackURL(data);
+    if (data?.players && data?.settings) return data; // legacy fallback
   } catch {}
   return null;
 })();
@@ -232,15 +260,15 @@ const playPeriodEnd    = () => beep([660, 660, 660], 0.25, 0.15);
 
 /* ─── Main App ─── */
 export default function App() {
-  const [tab, setTab]         = useState(initFromURL?.tab ?? "players");
+  const [tab, setTab]         = useState(initFromURL ? "plan" : "players");
   const [players, setPlayers] = useState(initFromURL?.players ?? DEMO);
   const [newName, setNewName] = useState("");
   const [settings, setSettings] = useState({
     periods: 3, duration: 15, subs: 1, format: "5v5",
     ...(initFromURL?.settings ?? {}),
   });
-  const [plan, setPlan]         = useState(initFromURL?.plan ?? null);
-  const [originalPlan, setOriginalPlan] = useState(initFromURL?.plan ?? null);
+  const [plan, setPlan]         = useState(() => initFromURL ? generatePlan(initFromURL.players, initFromURL.settings) : null);
+  const [originalPlan, setOriginalPlan] = useState(() => initFromURL ? generatePlan(initFromURL.players, initFromURL.settings) : null);
   const [sel, setSel]           = useState(null);
   const [copied, setCopied] = useState(false);
   const [winW, setWinW]     = useState(window.innerWidth);
@@ -269,10 +297,9 @@ export default function App() {
 
   useEffect(() => {
     try {
-      const encoded = btoa(encodeURIComponent(JSON.stringify({ players, settings, plan, tab, homeTeam, awayTeam, homeScore, awayScore }))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-      window.history.replaceState(null, "", "?" + encoded);
+      window.history.replaceState(null, "", "?" + _enc(JSON.stringify(packURL({ players, settings, homeTeam, awayTeam, homeScore, awayScore }))));
     } catch {}
-  }, [players, settings, plan, tab, homeTeam, awayTeam, homeScore, awayScore]);
+  }, [players, settings, homeTeam, awayTeam, homeScore, awayScore]);
 
   useEffect(() => {
     document.title = homeTeam && awayTeam ? `${homeTeam} – ${awayTeam}` : homeTeam || awayTeam || "Laguppställning";
