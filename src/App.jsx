@@ -848,6 +848,21 @@ export default function App() {
                 Matchinställningar
               </div>
 
+              {/* Team names */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ color: "#cbd5e1", fontSize: 14, display: "block", marginBottom: 6 }}>Hemmalag</span>
+                  <input id="home-team-input" value={homeTeam} onChange={e => setHomeTeam(e.target.value)} placeholder="Lagnamn"
+                    onKeyDown={e => { if (e.key === "Tab" && !e.shiftKey) { e.preventDefault(); document.getElementById("away-team-input")?.focus(); } }}
+                    style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 14, outline: "none", padding: "7px 9px", boxSizing: "border-box" }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ color: "#cbd5e1", fontSize: 14, display: "block", marginBottom: 6 }}>Bortalag</span>
+                  <input id="away-team-input" value={awayTeam} onChange={e => setAwayTeam(e.target.value)} placeholder="Lagnamn"
+                    style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 14, outline: "none", padding: "7px 9px", boxSizing: "border-box" }} />
+                </div>
+              </div>
+
               {/* Format selector */}
               <div style={{ marginBottom: 16 }}>
                 <span style={{ color: "#cbd5e1", fontSize: 14, display: "block", marginBottom: 8 }}>Spelform</span>
@@ -1092,11 +1107,11 @@ export default function App() {
 
                   {/* Scoreboard */}
                   <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #1e293b", display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ flex: 1, textAlign: "center" }}>
+                    <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
                       <div style={{ fontSize: 11, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Hemma</div>
-                      <input id="home-team-input" value={homeTeam} onChange={e => setHomeTeam(e.target.value)} placeholder="Lagnamn"
-                        onKeyDown={e => { if (e.key === "Tab" && !e.shiftKey) { e.preventDefault(); document.getElementById("away-team-input")?.focus(); } }}
-                        style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 15, fontWeight: 600, textAlign: "center", outline: "none", padding: "5px 6px", marginBottom: 10 }} />
+                      <div style={{ fontSize: 15, fontWeight: 600, color: homeTeam ? "#e2e8f0" : "#475569", marginBottom: 10, padding: "6px 6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minHeight: 17 }}>
+                        {homeTeam || "Hemmalag"}
+                      </div>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
                         <button onClick={() => setHomeScore(s => Math.max(0, s - 1))} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
                         <span style={{ fontFamily: "'Bebas Neue'", fontSize: 44, color: "#e2e8f0", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{homeScore}</span>
@@ -1104,10 +1119,11 @@ export default function App() {
                       </div>
                     </div>
                     <div style={{ fontFamily: "'Bebas Neue'", fontSize: 32, color: "#64748b", flexShrink: 0, paddingTop: 24 }}>—</div>
-                    <div style={{ flex: 1, textAlign: "center" }}>
+                    <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
                       <div style={{ fontSize: 11, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Borta</div>
-                      <input id="away-team-input" value={awayTeam} onChange={e => setAwayTeam(e.target.value)} placeholder="Lagnamn"
-                        style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 15, fontWeight: 600, textAlign: "center", outline: "none", padding: "5px 6px", marginBottom: 10 }} />
+                      <div style={{ fontSize: 15, fontWeight: 600, color: awayTeam ? "#e2e8f0" : "#475569", marginBottom: 10, padding: "6px 6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minHeight: 17 }}>
+                        {awayTeam || "Bortalag"}
+                      </div>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
                         <button onClick={() => setAwayScore(s => Math.max(0, s - 1))} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
                         <span style={{ fontFamily: "'Bebas Neue'", fontSize: 44, color: "#e2e8f0", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{awayScore}</span>
@@ -1121,6 +1137,12 @@ export default function App() {
                 </>
               );
             })()}
+
+            {/* Share link */}
+            <button onClick={shareLink} disabled={shareLoading}
+              style={{ ...S.btn(shareCopied ? "primary" : shareError ? "ghost" : "secondary"), width: "100%", marginBottom: 16, padding: "9px 0", fontSize: 13, color: shareError ? "#f87171" : undefined }}>
+              {shareCopied ? <><Check size={13} /> Länk kopierad!</> : shareLoading ? "Skapar länk…" : shareError ? `Fel: ${shareError}` : <><Link2 size={13} /> Dela kort länk</>}
+            </button>
 
             {/* Two-column on desktop: periods left, stats right */}
             <div style={isDesktop ? { display: "grid", gridTemplateColumns: "1fr 320px", gap: 24, alignItems: "start" } : {}}>
