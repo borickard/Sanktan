@@ -275,6 +275,10 @@ export default function App() {
   }, [players, settings, plan, tab, homeTeam, awayTeam, homeScore, awayScore]);
 
   useEffect(() => {
+    document.title = homeTeam && awayTeam ? `${homeTeam} – ${awayTeam}` : homeTeam || awayTeam || "Laguppställning";
+  }, [homeTeam, awayTeam]);
+
+  useEffect(() => {
     const h = () => setWinW(window.innerWidth);
     window.addEventListener("resize", h);
     return () => window.removeEventListener("resize", h);
@@ -587,8 +591,8 @@ export default function App() {
 
       {/* Header */}
       <div style={S.header}>
-        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(20px, 7vw, 30px)", letterSpacing: 2, color: "#f8fafc", lineHeight: 1 }}>
-          Laguppställning {settings.format}
+        <div style={{ fontFamily: "'Bebas Neue'", fontSize: "clamp(20px, 7vw, 30px)", letterSpacing: 2, color: "#f8fafc", lineHeight: 1 }}>
+          {homeTeam && awayTeam ? `${homeTeam} – ${awayTeam}` : homeTeam || awayTeam || "Laguppställning"} {settings.format}
         </div>
         <div style={{ fontSize: 11, color: "#475569", marginTop: 4, lineHeight: 1.6 }}>
           {activePlayers.length}/{players.length} sp &nbsp;·&nbsp; {settings.periods} per &nbsp;·&nbsp; {settings.duration} min &nbsp;·&nbsp; {settings.subs} byte
@@ -799,7 +803,7 @@ export default function App() {
             {/* Generate button */}
             <button onClick={doGenerate} style={{
               ...S.btn("primary"), width: "100%", marginTop: 16, padding: 15,
-              fontSize: 17, fontFamily: "'Bebas Neue', cursive", letterSpacing: 3,
+              fontSize: 17, fontFamily: "'Bebas Neue'", letterSpacing: 3,
             }}>
               GENERERA MATCHPLAN <ChevronRight size={17} />
             </button>
@@ -860,10 +864,10 @@ export default function App() {
                     <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "#1e293b", boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}>
                       <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 12, letterSpacing: 2, color: "#475569", flexShrink: 0 }}>
+                          <span style={{ fontFamily: "'Bebas Neue'", fontSize: 12, letterSpacing: 2, color: "#475569", flexShrink: 0 }}>
                             {`P${clampedPeriod + 1}/${plan.length}`}
                           </span>
-                          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 38, letterSpacing: 3, color: timeColor, lineHeight: 1, flex: 1 }}>
+                          <span style={{ fontFamily: "'Bebas Neue'", fontSize: 38, letterSpacing: 3, color: timeColor, lineHeight: 1, flex: 1 }}>
                             {fmtTime(timerElapsed)}
                           </span>
                           {isSwitchDue && !isOvertime && <ArrowUpDown size={15} color="#fb923c" style={{ flexShrink: 0 }} />}
@@ -884,7 +888,7 @@ export default function App() {
                               <button onClick={() => setScore(s => Math.max(0, s - 1))}
                                 style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 6, width: 28, height: 28, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
                               <div style={{ textAlign: "center", minWidth: 44 }}>
-                                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 34, color: "#e2e8f0", lineHeight: 1 }}>{score}</div>
+                                <div style={{ fontFamily: "'Bebas Neue'", fontSize: 34, color: "#e2e8f0", lineHeight: 1 }}>{score}</div>
                                 <div style={{ fontSize: 10, color: "#475569", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 70 }}>{name}</div>
                               </div>
                               <button onClick={() => setScore(s => s + 1)}
@@ -894,7 +898,7 @@ export default function App() {
                           return (
                             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                               <Sc score={homeScore} setScore={setHomeScore} name={homeTeam || "Hemmalag"} />
-                              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 22, color: "#334155", flexShrink: 0 }}>—</div>
+                              <div style={{ fontFamily: "'Bebas Neue'", fontSize: 22, color: "#334155", flexShrink: 0 }}>—</div>
                               <Sc score={awayScore} setScore={setAwayScore} name={awayTeam || "Bortalag"} />
                             </div>
                           );
@@ -908,13 +912,13 @@ export default function App() {
                     <div style={{ ...S.card, boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}>
                   <div style={{ padding: "16px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 15, letterSpacing: 2, color: "#475569" }}>TIMER</div>
+                    <div style={{ fontFamily: "'Bebas Neue'", fontSize: 15, letterSpacing: 2, color: "#475569" }}>TIMER</div>
                     <div style={{ fontSize: 12, color: "#475569" }}>Period {clampedPeriod + 1} / {plan.length}</div>
                   </div>
 
                   {/* Big time display */}
                   <div style={{ textAlign: "center", marginBottom: 10 }}>
-                    <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 60, letterSpacing: 4, color: timeColor, lineHeight: 1, transition: "color 0.3s" }}>
+                    <span style={{ fontFamily: "'Bebas Neue'", fontSize: 60, letterSpacing: 4, color: timeColor, lineHeight: 1, transition: "color 0.3s" }}>
                       {fmtTime(timerElapsed)}
                     </span>
                     <span style={{ fontSize: 12, color: "#334155", marginLeft: 6 }}>/ {settings.duration}:00</span>
@@ -989,32 +993,27 @@ export default function App() {
                   </div>
 
                   {/* Scoreboard */}
-                  {(() => {
-                    const ScoreCol = ({ team, setTeam, placeholder, score, setScore }) => (
-                      <div style={{ flex: 1, textAlign: "center" }}>
-                        <input
-                          value={team}
-                          onChange={e => setTeam(e.target.value)}
-                          placeholder={placeholder}
-                          style={{ width: "100%", background: "none", border: "none", borderBottom: "1px solid #1e293b", color: "#e2e8f0", fontSize: 16, fontWeight: 600, textAlign: "center", outline: "none", paddingBottom: 4, marginBottom: 10 }}
-                        />
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                          <button onClick={() => setScore(s => Math.max(0, s - 1))}
-                            style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 44, color: "#e2e8f0", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{score}</span>
-                          <button onClick={() => setScore(s => s + 1)}
-                            style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
-                        </div>
+                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #1e293b", display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ flex: 1, textAlign: "center" }}>
+                      <input value={homeTeam} onChange={e => setHomeTeam(e.target.value)} placeholder="Hemmalag"
+                        style={{ width: "100%", background: "none", border: "none", borderBottom: "1px solid #1e293b", color: "#e2e8f0", fontSize: 16, fontWeight: 600, textAlign: "center", outline: "none", paddingBottom: 4, marginBottom: 10 }} />
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                        <button onClick={() => setHomeScore(s => Math.max(0, s - 1))} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                        <span style={{ fontFamily: "'Bebas Neue'", fontSize: 44, color: "#e2e8f0", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{homeScore}</span>
+                        <button onClick={() => setHomeScore(s => s + 1)} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                       </div>
-                    );
-                    return (
-                      <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #1e293b", display: "flex", alignItems: "center", gap: 8 }}>
-                        <ScoreCol team={homeTeam} setTeam={setHomeTeam} placeholder="Hemmalag" score={homeScore} setScore={setHomeScore} />
-                        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 32, color: "#334155", flexShrink: 0, paddingTop: 24 }}>—</div>
-                        <ScoreCol team={awayTeam} setTeam={setAwayTeam} placeholder="Bortalag" score={awayScore} setScore={setAwayScore} />
+                    </div>
+                    <div style={{ fontFamily: "'Bebas Neue'", fontSize: 32, color: "#334155", flexShrink: 0, paddingTop: 24 }}>—</div>
+                    <div style={{ flex: 1, textAlign: "center" }}>
+                      <input value={awayTeam} onChange={e => setAwayTeam(e.target.value)} placeholder="Bortalag"
+                        style={{ width: "100%", background: "none", border: "none", borderBottom: "1px solid #1e293b", color: "#e2e8f0", fontSize: 16, fontWeight: 600, textAlign: "center", outline: "none", paddingBottom: 4, marginBottom: 10 }} />
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                        <button onClick={() => setAwayScore(s => Math.max(0, s - 1))} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                        <span style={{ fontFamily: "'Bebas Neue'", fontSize: 44, color: "#e2e8f0", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{awayScore}</span>
+                        <button onClick={() => setAwayScore(s => s + 1)} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                       </div>
-                    );
-                  })()}
+                    </div>
+                  </div>
                   </div>
                     </div>
                   </div>
@@ -1059,7 +1058,7 @@ export default function App() {
                       display: "flex", justifyContent: "space-between", alignItems: "center",
                       borderBottom: "1px solid #1a5c33",
                     }}>
-                      <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 22, letterSpacing: 2, color: "#4ade80" }}>
+                      <div style={{ fontFamily: "'Bebas Neue'", fontSize: 22, letterSpacing: 2, color: "#4ade80" }}>
                         Period {i + 1}
                       </div>
                       <div style={{ fontSize: 12, color: "#4ade80", opacity: 0.7 }}>
@@ -1133,7 +1132,7 @@ export default function App() {
             <div style={isDesktop ? { position: "sticky", top: 0 } : { marginTop: 24 }}>
             <div style={{ ...S.card, padding: "16px" }}>
               <div style={{
-                fontFamily: "'Bebas Neue', cursive", fontSize: 20, letterSpacing: 2,
+                fontFamily: "'Bebas Neue'", fontSize: 20, letterSpacing: 2,
                 color: "#94a3b8", marginBottom: 14,
               }}>
                 Speltid — {totalPossible} min totalt
