@@ -1133,7 +1133,7 @@ export default function App() {
                   )}
 
                   {/* Status banners */}
-                  {isSwitchDue && !isOvertime && (
+                  {isSwitchDue && !isOvertime && timerElapsed < halfSecs + 60 && (
                     <div style={{
                       background: switchBlink ? "#7c2d12" : "#431407",
                       border: "1px solid #ea580c", borderRadius: 8,
