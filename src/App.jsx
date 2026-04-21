@@ -272,8 +272,8 @@ export default function App() {
     periods: 3, duration: 15, subs: 1, format: "5v5",
     ...(initFromURL?.settings ?? {}),
   });
-  const [plan, setPlan]         = useState(() => initFromURL ? generatePlan(initFromURL.players, initFromURL.settings) : null);
-  const [originalPlan, setOriginalPlan] = useState(() => initFromURL ? generatePlan(initFromURL.players, initFromURL.settings) : null);
+  const [plan, setPlan]         = useState(() => initFromURL ? generatePlan(initFromURL.players.filter(p => p.enabled !== false), initFromURL.settings) : null);
+  const [originalPlan, setOriginalPlan] = useState(() => initFromURL ? generatePlan(initFromURL.players.filter(p => p.enabled !== false), initFromURL.settings) : null);
   const [sel, setSel]           = useState(null);
   const [copied, setCopied] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
@@ -317,7 +317,7 @@ export default function App() {
         setAwayTeam(unpacked.awayTeam);
         setHomeScore(unpacked.homeScore);
         setAwayScore(unpacked.awayScore);
-        const p = generatePlan(unpacked.players, unpacked.settings);
+        const p = generatePlan(unpacked.players.filter(pl => pl.enabled !== false), unpacked.settings);
         setPlan(p); setOriginalPlan(p);
         setTab("plan");
       })
@@ -552,6 +552,7 @@ export default function App() {
     if (!id) return null;
     const p = getP(id);
     if (!p) return null;
+    if (p.enabled === false) return null;
     const isSelected = sel?.id === id;
     const isSel2nd = sel && sel.id !== id;
     const activeGK = p.isGK && inGKSlot;
@@ -922,8 +923,13 @@ export default function App() {
               </button>
             )}
             <button onClick={shareLink} disabled={shareLoading}
-              style={{ ...S.btn(shareCopied ? "primary" : shareError ? "ghost" : "secondary"), width: "100%", marginTop: 8, padding: "9px 0", fontSize: 13, color: shareError ? "#f87171" : undefined }}>
-              {shareCopied ? <><Check size={13} /> Länk kopierad!</> : shareLoading ? "Skapar länk…" : shareError ? `Fel: ${shareError}` : <><Link2 size={13} /> Dela kort länk</>}
+              style={{
+                ...S.btn("primary"), width: "100%", marginTop: 8, padding: "11px 0", fontSize: 14, fontWeight: 700,
+                background: shareCopied ? "#22c55e" : shareError ? "#7f1d1d" : "#3b82f6",
+                color: "#fff", border: "none",
+                opacity: shareLoading ? 0.7 : 1,
+              }}>
+              {shareCopied ? <><Check size={14} /> Länk kopierad!</> : shareLoading ? "Skapar länk…" : shareError ? <><AlertTriangle size={14} /> Fel: {shareError}</> : <><Link2 size={14} /> Dela kort länk</>}
             </button>
           </div>
         )}
@@ -1140,8 +1146,13 @@ export default function App() {
 
             {/* Share link */}
             <button onClick={shareLink} disabled={shareLoading}
-              style={{ ...S.btn(shareCopied ? "primary" : shareError ? "ghost" : "secondary"), width: "100%", marginBottom: 16, padding: "9px 0", fontSize: 13, color: shareError ? "#f87171" : undefined }}>
-              {shareCopied ? <><Check size={13} /> Länk kopierad!</> : shareLoading ? "Skapar länk…" : shareError ? `Fel: ${shareError}` : <><Link2 size={13} /> Dela kort länk</>}
+              style={{
+                ...S.btn("primary"), width: "100%", marginBottom: 16, padding: "11px 0", fontSize: 14, fontWeight: 700,
+                background: shareCopied ? "#22c55e" : shareError ? "#7f1d1d" : "#3b82f6",
+                color: "#fff", border: "none",
+                opacity: shareLoading ? 0.7 : 1,
+              }}>
+              {shareCopied ? <><Check size={14} /> Länk kopierad!</> : shareLoading ? "Skapar länk…" : shareError ? <><AlertTriangle size={14} /> Fel: {shareError}</> : <><Link2 size={14} /> Dela kort länk</>}
             </button>
 
             {/* Two-column on desktop: periods left, stats right */}
