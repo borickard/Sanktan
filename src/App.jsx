@@ -674,6 +674,7 @@ export default function App() {
                       const idx = players.findIndex(pl => pl.id === p.id);
                       const next = players[idx + 1];
                       if (next) document.getElementById(`player-name-${next.id}`)?.focus();
+                      else document.getElementById("new-player-input")?.focus();
                     } else if (e.key === "Tab" && e.shiftKey) {
                       e.preventDefault();
                       const idx = players.findIndex(pl => pl.id === p.id);
@@ -717,6 +718,7 @@ export default function App() {
             {/* Add player */}
             <div style={{ display: "flex", gap: 8, marginTop: 4, marginBottom: 16 }}>
               <input
+                id="new-player-input"
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && addPlayer()}
@@ -996,7 +998,8 @@ export default function App() {
                   <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #1e293b", display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, textAlign: "center" }}>
                       <div style={{ fontSize: 9, color: "#475569", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Hemma</div>
-                      <input value={homeTeam} onChange={e => setHomeTeam(e.target.value)} placeholder="Lagnamn"
+                      <input id="home-team-input" value={homeTeam} onChange={e => setHomeTeam(e.target.value)} placeholder="Lagnamn"
+                        onKeyDown={e => { if (e.key === "Tab" && !e.shiftKey) { e.preventDefault(); document.getElementById("away-team-input")?.focus(); } }}
                         style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 15, fontWeight: 600, textAlign: "center", outline: "none", padding: "5px 6px", marginBottom: 10 }} />
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
                         <button onClick={() => setHomeScore(s => Math.max(0, s - 1))} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
@@ -1007,7 +1010,7 @@ export default function App() {
                     <div style={{ fontFamily: "'Bebas Neue'", fontSize: 32, color: "#334155", flexShrink: 0, paddingTop: 24 }}>—</div>
                     <div style={{ flex: 1, textAlign: "center" }}>
                       <div style={{ fontSize: 9, color: "#475569", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Borta</div>
-                      <input value={awayTeam} onChange={e => setAwayTeam(e.target.value)} placeholder="Lagnamn"
+                      <input id="away-team-input" value={awayTeam} onChange={e => setAwayTeam(e.target.value)} placeholder="Lagnamn"
                         style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 15, fontWeight: 600, textAlign: "center", outline: "none", padding: "5px 6px", marginBottom: 10 }} />
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
                         <button onClick={() => setAwayScore(s => Math.max(0, s - 1))} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
