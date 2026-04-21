@@ -737,6 +737,9 @@ export default function App() {
               Tryck för att redigera · MV = Målvakt
             </div>
 
+            <div style={isDesktop ? { display: "grid", gridTemplateColumns: "1fr 360px", gap: 24, alignItems: "start" } : {}}>
+            <div>
+
             {players.map((p, i) => (
               <div
                 key={p.id}
@@ -850,6 +853,9 @@ export default function App() {
               </button>
             </div>
 
+            </div>
+            <div>
+
             {/* Legend */}
             <div style={{ ...S.card, padding: "10px 14px", marginBottom: 16 }}>
               <div style={{ fontSize: 12, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Preferenser</div>
@@ -955,6 +961,9 @@ export default function App() {
               }}>
               {shareCopied ? <><Check size={14} /> Länk kopierad!</> : shareLoading ? "Skapar länk…" : shareError ? <><AlertTriangle size={14} /> Fel: {shareError}</> : <><Link2 size={14} /> Dela kort länk</>}
             </button>
+
+            </div>
+            </div>
           </div>
         )}
 
@@ -1387,6 +1396,10 @@ export default function App() {
                 );
               })()}
             </div>
+            <button onClick={doReset} disabled={!originalPlan}
+              style={{ ...S.btn("secondary"), width: "100%", marginTop: 12, padding: "9px 0", fontSize: 13, opacity: !originalPlan ? 0.5 : 1 }}>
+              <RotateCcw size={13} /> Återställ till original
+            </button>
             </div>
             </div>
 
