@@ -749,11 +749,9 @@ export default function App() {
 
               return (
                 <>
-                  <div ref={timerSentinelRef} />
-                  <div style={{ ...S.card, marginBottom: 16, position: "sticky", top: 0, zIndex: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}>
-
-                    {/* ── Compact state ── */}
-                    <div style={{ maxHeight: timerCompact ? 200 : 0, overflow: "hidden" }}>
+                  {/* Compact fixed overlay — position:fixed so it never shifts layout */}
+                  {timerCompact && (
+                    <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "#1e293b", boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}>
                       <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 12, letterSpacing: 2, color: "#475569", flexShrink: 0 }}>
@@ -797,9 +795,11 @@ export default function App() {
                         })()}
                       </div>
                     </div>
+                  )}
 
-                    {/* ── Full state ── */}
-                    <div style={{ maxHeight: timerCompact ? 0 : 700, overflow: "hidden" }}>
+                  {/* Full card — always in flow; visibility:hidden when compact preserves its space so nothing jumps */}
+                  <div ref={timerSentinelRef} style={{ visibility: timerCompact ? "hidden" : "visible", marginBottom: 16 }}>
+                    <div style={{ ...S.card, boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}>
                   <div style={{ padding: "16px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 15, letterSpacing: 2, color: "#475569" }}>TIMER</div>
