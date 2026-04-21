@@ -413,6 +413,12 @@ export default function App() {
   const isDesktop = winW >= 700;
   const fmtTime   = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   const getP      = id => players.find(p => p.id === id);
+  const displayName = p => {
+    const n = (p?.name ?? "").trim();
+    if (n) return n;
+    const idx = players.findIndex(pl => pl.id === p?.id);
+    return `Spelare ${idx + 1}`;
+  };
 
   const addPlayer = () => {
     const n = newName.trim();
@@ -441,6 +447,19 @@ export default function App() {
 
   const doReset = () => {
     if (originalPlan) { setPlan(originalPlan); setSel(null); }
+  };
+
+  const resetAll = () => {
+    if (!window.confirm("Återställ allt till standardvärden?")) return;
+    setPlayers([...DEMO]);
+    setSettings({ periods: 3, duration: 15, subs: 1, format: "5v5" });
+    setHomeTeam(""); setAwayTeam("");
+    setHomeScore(0); setAwayScore(0);
+    setPlan(null); setOriginalPlan(null);
+    setSel(null);
+    setTab("players");
+    setTimerRunning(false); setTimerElapsed(0); setTimerPeriod(0);
+    setNewName("");
   };
 
   const [shareOpen, setShareOpen] = useState(false);
@@ -583,7 +602,7 @@ export default function App() {
         {p.isGK && !inGKSlot && (
           <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>mv</span>
         )}
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName(p)}</span>
       </div>
     );
   };
@@ -684,11 +703,15 @@ export default function App() {
 
       {/* Header */}
       <div style={S.header}>
-        <div style={{ fontFamily: "'Bebas Neue'", fontSize: "clamp(20px, 7vw, 30px)", letterSpacing: 2, color: "#f8fafc", lineHeight: 1 }}>
-          {homeTeam && awayTeam ? `${homeTeam} – ${awayTeam}` : homeTeam || awayTeam || "Laguppställning"} {settings.format}
+        <div
+          onClick={e => { e.stopPropagation(); resetAll(); }}
+          title="Klicka för att återställa allt"
+          style={{ fontFamily: "'Bebas Neue'", fontSize: "clamp(20px, 7vw, 30px)", letterSpacing: 2, color: "#f8fafc", lineHeight: 1, cursor: "pointer", display: "inline-flex", alignItems: "baseline", gap: 10 }}
+        >
+          Matchplaneraren <span style={{ fontSize: "0.6em", color: "#84cc16", letterSpacing: 2 }}>{settings.format}</span>
         </div>
         <div style={{ fontSize: 13, color: "#64748b", marginTop: 4, lineHeight: 1.6 }}>
-          {activePlayers.length}/{players.length} sp &nbsp;·&nbsp; {settings.periods} per &nbsp;·&nbsp; {settings.duration} min &nbsp;·&nbsp; {settings.subs} byte
+          {activePlayers.length}/{players.length} sp &nbsp;·&nbsp; {settings.periods}x{settings.duration} min &nbsp;·&nbsp; {settings.subs} byte per period
         </div>
       </div>
 
@@ -760,6 +783,7 @@ export default function App() {
                 <input
                   id={`player-name-${p.id}`}
                   value={p.name}
+                  placeholder={`Spelare ${i + 1}`}
                   onChange={e => updP(p.id, "name", e.target.value)}
                   onKeyDown={e => {
                     if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
@@ -955,7 +979,7 @@ export default function App() {
                 borderRadius: 9, padding: "9px 14px", marginBottom: 12, fontSize: 12, textAlign: "center",
                 background: "#422006", color: "#fed7aa", border: "1px solid #7c2d12",
               }}>
-                Markerat <strong>{getP(sel.id)?.name}</strong> i period {sel.periodIdx + 1} — tryck på en annan spelare i samma period för att byta.
+                Markerat <strong>{(() => { const p = getP(sel.id); return p ? displayName(p) : ""; })()}</strong> i period {sel.periodIdx + 1} — tryck på en annan spelare i samma period för att byta.
               </div>
             )}
             <div style={{ marginBottom: 16 }} />
@@ -1304,7 +1328,7 @@ export default function App() {
                             ? <span style={{ fontSize: 11, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
                             : <pref.Icon size={12} color={pref.color} />
                           }
-                          <span style={{ fontSize: 13, color: "#cbd5e1" }}>{p.name}</span>
+                          <span style={{ fontSize: 13, color: "#cbd5e1" }}>{displayName(p)}</span>
                         </div>
                         <span style={{ fontSize: 13, fontWeight: 700, color: textColor }}>
                           {m} min
