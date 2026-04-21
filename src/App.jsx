@@ -922,7 +922,14 @@ export default function App() {
             {/* Period cards */}
             <div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: isDesktop ? 24 : 0 }}>
-              {plan.map((period, i) => (
+              {plan.map((period, i) => {
+                const isActivePeriod = i === timerPeriod && period.att2 != null;
+                const pSecs = settings.duration * 60;
+                const hSecs = Math.round(pSecs / 2);
+                const half1Lit = isActivePeriod && timerElapsed < hSecs;
+                const half2Lit = isActivePeriod && timerElapsed >= hSecs;
+                const halfDim = (lit) => ({ transition: "opacity 0.4s", opacity: isActivePeriod && !lit ? 0.35 : 1 });
+                return (
                 <div key={i}>
                   {/* Mobile break separator between periods */}
                   {!isDesktop && i > 0 && (
@@ -958,7 +965,7 @@ export default function App() {
                     {period.att2 != null && isDesktop ? (
                       /* Desktop: halves side by side */
                       <div style={{ display: "flex" }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ flex: 1, minWidth: 0, ...halfDim(half1Lit) }}>
                           <HalfLabel text={`1. Halvlek · ${Math.round(settings.duration / 2)} min`} />
                           <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i} />
                         </div>
@@ -970,7 +977,7 @@ export default function App() {
                           <span style={{ fontSize: 10, color: "#4ade80", fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", writingMode: "vertical-lr", transform: "rotate(180deg)" }}>HALVTID</span>
                           {fmt.hasGK && <span style={{ fontSize: 9, color: "#475569", writingMode: "vertical-lr", transform: "rotate(180deg)", marginTop: 8 }}>MV stannar</span>}
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ flex: 1, minWidth: 0, ...halfDim(half2Lit) }}>
                           <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
                           <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK periodIdx={i} />
                         </div>
@@ -978,8 +985,10 @@ export default function App() {
                     ) : period.att2 != null ? (
                       /* Stacked layout (mobile or periods 2+) */
                       <>
-                        <HalfLabel text={`1. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                        <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i} />
+                        <div style={halfDim(half1Lit)}>
+                          <HalfLabel text={`1. Halvlek · ${Math.round(settings.duration / 2)} min`} />
+                          <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i} />
+                        </div>
                         <div style={{
                           background: "#061812", borderTop: "1px dashed #1a5c33", borderBottom: "1px dashed #1a5c33",
                           padding: "7px 14px", display: "flex", justifyContent: "center", alignItems: "center", gap: 10,
@@ -987,8 +996,10 @@ export default function App() {
                           <span style={{ fontSize: 11, color: "#4ade80", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", display: "inline-flex", alignItems: "center", gap: 5 }}><ArrowUpDown size={11} /> HALVTID</span>
                           {fmt.hasGK && <span style={{ fontSize: 10, color: "#475569" }}>MV stannar · alla utespelare byts</span>}
                         </div>
-                        <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                        <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK periodIdx={i} />
+                        <div style={halfDim(half2Lit)}>
+                          <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
+                          <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK periodIdx={i} />
+                        </div>
                       </>
                     ) : (
                       <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i} />
@@ -1007,7 +1018,8 @@ export default function App() {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
             </div>
 
