@@ -678,7 +678,7 @@ export default function App() {
       fontSize: 14, fontWeight: active ? 600 : 400, transition: "all 0.15s",
       display: "inline-flex", alignItems: "center", gap: 6,
     }),
-    body:  { padding: isDesktop ? "24px 32px 60px" : "16px 16px 40px", maxWidth: isDesktop ? (tab === "plan" ? 980 : 640) : "100%", margin: "0 auto" },
+    body:  { padding: isDesktop ? "24px 32px 60px" : "16px 16px 40px", maxWidth: isDesktop ? 980 : "100%", margin: "0 auto" },
     card:  { background: "#1e293b", borderRadius: 12, marginBottom: 12, overflow: "hidden" },
     btn:   (variant = "primary") => ({
       border: "none", borderRadius: 9, cursor: "pointer",
