@@ -1205,7 +1205,7 @@ export default function App() {
 
               {/* Fairness score */}
               {(() => {
-                const vals = Object.values(mins).filter(v => v >= 0);
+                const vals = activePlayers.map(p => mins[p.id] ?? 0);
                 const sum = vals.reduce((a, b) => a + b, 0);
                 const avg = sum / vals.length;
                 const maxDiff = Math.max(...vals.map(v => Math.abs(v - avg)));
