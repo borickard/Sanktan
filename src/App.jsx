@@ -753,7 +753,7 @@ export default function App() {
                   <div style={{ ...S.card, marginBottom: 16, position: "sticky", top: 0, zIndex: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}>
 
                     {/* ── Compact state ── */}
-                    <div style={{ maxHeight: timerCompact ? 200 : 0, overflow: "hidden", transition: "max-height 0.3s ease" }}>
+                    <div style={{ maxHeight: timerCompact ? 200 : 0, overflow: "hidden" }}>
                       <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 12, letterSpacing: 2, color: "#475569", flexShrink: 0 }}>
@@ -799,7 +799,7 @@ export default function App() {
                     </div>
 
                     {/* ── Full state ── */}
-                    <div style={{ maxHeight: timerCompact ? 0 : 700, overflow: "hidden", transition: "max-height 0.35s ease" }}>
+                    <div style={{ maxHeight: timerCompact ? 0 : 700, overflow: "hidden" }}>
                   <div style={{ padding: "16px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 15, letterSpacing: 2, color: "#475569" }}>TIMER</div>
