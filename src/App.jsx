@@ -928,7 +928,7 @@ export default function App() {
                 const hSecs = Math.round(pSecs / 2);
                 const half1Lit = isActivePeriod && timerElapsed < hSecs;
                 const half2Lit = isActivePeriod && timerElapsed >= hSecs;
-                const halfDim = (lit) => ({ transition: "opacity 0.4s", opacity: isActivePeriod && !lit ? 0.35 : 1 });
+                const halfDim = (lit) => ({ opacity: isActivePeriod && !lit ? 0.35 : 1 });
                 return (
                 <div key={i}>
                   {/* Mobile break separator between periods */}
