@@ -1038,7 +1038,7 @@ export default function App() {
                 const hSecs = Math.round(pSecs / 2);
                 const half1Lit = isActivePeriod && timerElapsed < hSecs;
                 const half2Lit = isActivePeriod && timerElapsed >= hSecs;
-                const halfDim = (lit) => (isActivePeriod && lit ? { outline: "2px solid #4ade80", outlineOffset: -2, borderRadius: 8 } : {});
+                const halfDim = (lit) => (isActivePeriod && lit ? { boxShadow: "inset 0 0 0 2px #4ade80" } : {});
                 return (
                 <div key={i}>
                   {/* Mobile break separator between periods */}
