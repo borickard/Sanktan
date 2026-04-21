@@ -167,6 +167,7 @@ export default function App() {
   const [timerElapsed, setTimerElapsed] = useState(0); // seconds
   const [timerPeriod,  setTimerPeriod]  = useState(0); // 0-indexed
   const timerRef = useRef(null);
+  const [timerCompact, setTimerCompact] = useState(false);
   const [homeTeam,  setHomeTeam]  = useState(initFromURL?.homeTeam  ?? "");
   const [awayTeam,  setAwayTeam]  = useState(initFromURL?.awayTeam  ?? "");
   const [homeScore, setHomeScore] = useState(initFromURL?.homeScore ?? 0);
@@ -191,6 +192,12 @@ export default function App() {
     const h = () => setWinW(window.innerWidth);
     window.addEventListener("resize", h);
     return () => window.removeEventListener("resize", h);
+  }, []);
+
+  useEffect(() => {
+    const h = () => setTimerCompact(window.scrollY > 120);
+    window.addEventListener("scroll", h, { passive: true });
+    return () => window.removeEventListener("scroll", h);
   }, []);
 
   useEffect(() => {
@@ -734,7 +741,32 @@ export default function App() {
               const reset  = () => { setTimerElapsed(0); setTimerRunning(false); };
 
               return (
-                <div style={{ ...S.card, padding: "16px", marginBottom: 16, position: "sticky", top: 0, zIndex: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}>
+                <div style={{ ...S.card, marginBottom: 16, position: "sticky", top: 0, zIndex: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.6)", overflow: "hidden" }}>
+                  {timerCompact ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
+                      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 11, letterSpacing: 2, color: "#475569", flexShrink: 0 }}>
+                        {`P${clampedPeriod + 1}/${plan.length}`}
+                      </span>
+                      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 28, letterSpacing: 3, color: timeColor, lineHeight: 1, flexShrink: 0 }}>
+                        {fmtTime(timerElapsed)}
+                      </span>
+                      <div
+                        onClick={e => { const r = e.currentTarget.getBoundingClientRect(); const dx = e.clientX - r.left; setTimerElapsed(Math.round(dx / r.width * periodSecs)); }}
+                        style={{ flex: 1, height: 6, background: "#0f172a", borderRadius: 3, cursor: "pointer", overflow: "hidden" }}>
+                        <div style={{ width: `${barPct}%`, height: "100%", background: barColor, borderRadius: 3 }} />
+                      </div>
+                      {isSwitchDue && !isOvertime && <ArrowUpDown size={14} color="#fb923c" style={{ flexShrink: 0 }} />}
+                      {isOvertime && <AlertTriangle size={14} color="#f87171" style={{ flexShrink: 0 }} />}
+                      <button onClick={() => setTimerRunning(r => !r)}
+                        style={{ ...S.btn("primary"), padding: "6px 10px", flexShrink: 0 }}>
+                        {timerRunning ? <Pause size={13} /> : <Play size={13} />}
+                      </button>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#94a3b8", flexShrink: 0 }}>
+                        {homeScore}—{awayScore}
+                      </span>
+                    </div>
+                  ) : (
+                  <div style={{ padding: "16px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 15, letterSpacing: 2, color: "#475569" }}>TIMER</div>
                     <div style={{ fontSize: 12, color: "#475569" }}>Period {clampedPeriod + 1} / {plan.length}</div>
@@ -752,7 +784,8 @@ export default function App() {
                   <div
                     onClick={e => {
                       const rect = e.currentTarget.getBoundingClientRect();
-                      const pct = (e.clientX - rect.left) / rect.width;
+                      const dx = e.clientX - rect.left;
+                      const pct = dx / rect.width;
                       setTimerElapsed(Math.round(Math.max(0, pct) * periodSecs));
                     }}
                     style={{ background: "#0f172a", borderRadius: 6, height: 10, marginBottom: 4, position: "relative", overflow: "hidden", cursor: "pointer" }}>
@@ -823,7 +856,7 @@ export default function App() {
                           value={team}
                           onChange={e => setTeam(e.target.value)}
                           placeholder={placeholder}
-                          style={{ width: "100%", background: "none", border: "none", borderBottom: "1px solid #1e293b", color: "#e2e8f0", fontSize: 13, fontWeight: 600, textAlign: "center", outline: "none", paddingBottom: 4, marginBottom: 10 }}
+                          style={{ width: "100%", background: "none", border: "none", borderBottom: "1px solid #1e293b", color: "#e2e8f0", fontSize: 16, fontWeight: 600, textAlign: "center", outline: "none", paddingBottom: 4, marginBottom: 10 }}
                         />
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
                           <button onClick={() => setScore(s => Math.max(0, s - 1))}
@@ -842,6 +875,8 @@ export default function App() {
                       </div>
                     );
                   })()}
+                  </div>
+                  )}
                 </div>
               );
             })()}
@@ -939,8 +974,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-            </div> {/* end period cards inner grid */}
-            </div> {/* end left column */}
+            </div>
 
             {/* ─── Right column: Playing time summary ─── */}
             <div style={isDesktop ? { position: "sticky", top: 0 } : { marginTop: 24 }}>
@@ -1003,7 +1037,8 @@ export default function App() {
                           { count: ps.bench, color: "#1e3a5f" },
                         ].map(({ count, color }, si) => {
                           const total = (ps.gk ?? 0) + (ps.att ?? 0) + (ps.mid ?? 0) + (ps.def ?? 0) + (ps.bench ?? 0);
-                          const segPct = total > 0 ? ((count ?? 0) / total) * 100 : 0;
+                          const c = count ?? 0;
+                          const segPct = total > 0 ? (c / total) * 100 : 0;
                           return segPct > 0 ? <div key={si} style={{ width: `${segPct}%`, height: "100%", background: color, transition: "width 0.5s" }} /> : null;
                         })}
                       </div>
@@ -1014,7 +1049,8 @@ export default function App() {
               {/* Fairness score */}
               {(() => {
                 const vals = Object.values(mins).filter(v => v >= 0);
-                const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+                const sum = vals.reduce((a, b) => a + b, 0);
+                const avg = sum / vals.length;
                 const maxDiff = Math.max(...vals.map(v => Math.abs(v - avg)));
                 const fair = maxDiff <= settings.duration / 2;
                 return (
@@ -1034,8 +1070,8 @@ export default function App() {
                 );
               })()}
             </div>
-            </div> {/* end right column */}
-            </div> {/* end two-column grid */}
+            </div>
+            </div>
 
           </div>
         )}
