@@ -279,6 +279,7 @@ export default function App() {
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied,  setShareCopied]  = useState(false);
   const [shareError,   setShareError]   = useState(null);
+  const [shareUrl,     setShareUrl]     = useState(null);
   const [kvLoading, setKvLoading] = useState(isShortCode);
   const [winW, setWinW]     = useState(window.innerWidth);
   const [timerRunning, setTimerRunning] = useState(false);
@@ -339,6 +340,7 @@ export default function App() {
       const { code } = await res.json();
       if (!code) throw new Error("no code returned");
       const url = `${window.location.origin}?c=${code}`;
+      setShareUrl(url);
       try {
         await navigator.clipboard.writeText(url);
         setShareCopied(true);
@@ -358,6 +360,7 @@ export default function App() {
     try {
       window.history.replaceState(null, "", "?" + _enc(JSON.stringify(packURL({ players, settings, homeTeam, awayTeam, homeScore, awayScore }))));
     } catch {}
+    setShareUrl(null);
   }, [players, settings, homeTeam, awayTeam, homeScore, awayScore]);
 
   useEffect(() => {
@@ -461,6 +464,47 @@ export default function App() {
     setTimerRunning(false); setTimerElapsed(0); setTimerPeriod(0);
     setNewName("");
   };
+
+  const copyShareUrl = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    } catch {
+      window.prompt("Kopiera länken:", shareUrl);
+    }
+  };
+
+  const renderShareControl = (extraStyle = {}) => shareUrl ? (
+    <button onClick={copyShareUrl}
+      style={{
+        width: "100%", padding: "10px 12px",
+        background: shareCopied ? "#22c55e" : "#1e293b",
+        border: `1px solid ${shareCopied ? "#22c55e" : "#334155"}`,
+        borderRadius: 9,
+        color: shareCopied ? "#fff" : "#94a3b8",
+        fontSize: 13, fontFamily: "'DM Sans', system-ui, sans-serif", cursor: "pointer",
+        display: "flex", alignItems: "center", gap: 8, textAlign: "left",
+        ...extraStyle,
+      }}>
+      {shareCopied ? <Check size={14} /> : <Link2 size={14} color="#3b82f6" />}
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+        {shareCopied ? "Länk kopierad!" : shareUrl}
+      </span>
+    </button>
+  ) : (
+    <button onClick={shareLink} disabled={shareLoading}
+      style={{
+        ...S.btn("primary"), width: "100%", padding: "11px 0", fontSize: 14, fontWeight: 700,
+        background: shareError ? "#7f1d1d" : "#3b82f6",
+        color: "#fff", border: "none",
+        opacity: shareLoading ? 0.7 : 1,
+        ...extraStyle,
+      }}>
+      {shareLoading ? "Skapar länk…" : shareError ? <><AlertTriangle size={14} /> Fel: {shareError}</> : <><Link2 size={14} /> Dela kort länk</>}
+    </button>
+  );
 
   const [shareOpen, setShareOpen] = useState(false);
 
@@ -952,15 +996,7 @@ export default function App() {
                 <RotateCcw size={13} /> Återställ till original
               </button>
             )}
-            <button onClick={shareLink} disabled={shareLoading}
-              style={{
-                ...S.btn("primary"), width: "100%", marginTop: 8, padding: "11px 0", fontSize: 14, fontWeight: 700,
-                background: shareCopied ? "#22c55e" : shareError ? "#7f1d1d" : "#3b82f6",
-                color: "#fff", border: "none",
-                opacity: shareLoading ? 0.7 : 1,
-              }}>
-              {shareCopied ? <><Check size={14} /> Länk kopierad!</> : shareLoading ? "Skapar länk…" : shareError ? <><AlertTriangle size={14} /> Fel: {shareError}</> : <><Link2 size={14} /> Dela kort länk</>}
-            </button>
+            {renderShareControl({ marginTop: 8 })}
 
             </div>
             </div>
@@ -1178,15 +1214,7 @@ export default function App() {
             })()}
 
             {/* Share link */}
-            <button onClick={shareLink} disabled={shareLoading}
-              style={{
-                ...S.btn("primary"), width: "100%", marginBottom: 16, padding: "11px 0", fontSize: 14, fontWeight: 700,
-                background: shareCopied ? "#22c55e" : shareError ? "#7f1d1d" : "#3b82f6",
-                color: "#fff", border: "none",
-                opacity: shareLoading ? 0.7 : 1,
-              }}>
-              {shareCopied ? <><Check size={14} /> Länk kopierad!</> : shareLoading ? "Skapar länk…" : shareError ? <><AlertTriangle size={14} /> Fel: {shareError}</> : <><Link2 size={14} /> Dela kort länk</>}
-            </button>
+            <div style={{ marginBottom: 16 }}>{renderShareControl()}</div>
 
             {/* Two-column on desktop: periods left, stats right */}
             <div style={isDesktop ? { display: "grid", gridTemplateColumns: "1fr 320px", gap: 24, alignItems: "start" } : {}}>
