@@ -46,7 +46,8 @@ const initFromURL = (() => {
   try {
     const hash = window.location.hash.slice(1);
     if (!hash) return null;
-    const decoded = JSON.parse(decodeURIComponent(atob(hash)));
+    const padded = hash + "===".slice((hash.length * 3) % 4);
+    const decoded = JSON.parse(decodeURIComponent(atob(padded)));
     if (decoded?.players && decoded?.settings) return decoded;
   } catch {}
   return null;
@@ -183,7 +184,7 @@ export default function App() {
 
   useEffect(() => {
     try {
-      const encoded = btoa(encodeURIComponent(JSON.stringify({ players, settings, plan, tab, homeTeam, awayTeam, homeScore, awayScore })));
+      const encoded = btoa(encodeURIComponent(JSON.stringify({ players, settings, plan, tab, homeTeam, awayTeam, homeScore, awayScore }))).replace(/=+$/, "");
       window.history.replaceState(null, "", "#" + encoded);
     } catch {}
   }, [players, settings, plan, tab, homeTeam, awayTeam, homeScore, awayScore]);
