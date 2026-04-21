@@ -109,40 +109,81 @@ function generatePlan(players, settings) {
       .sort((a, b) => mins[a.id] - mins[b.id]);
 
     if (subs >= 1) {
-      /* Full half-time rotation: pick up to 2×fieldCount players */
       const HALF = FULL / 2;
-      const take = Math.min(fieldCount * 2, avail.length);
-      const selected  = avail.slice(0, take);
-      /* Spread attackers/defenders across both halves so each half gets
-         proportional pref coverage instead of all attackers in one half. */
-      const h1 = [], h2 = [];
-      const byPref = ["attack", "defense", "neutral", "gk"].map(
-        pr => selected.filter(p => p.pref === pr || (pr === "neutral" && p.pref !== "attack" && p.pref !== "defense"))
-      );
-      for (const group of byPref) {
-        group.forEach((p, i) => {
-          if (h1.length < fieldCount && (i % 2 === 0 || h2.length >= fieldCount)) h1.push(p);
-          else if (h2.length < fieldCount) h2.push(p);
-          else h1.push(p);
-        });
-      }
-      const firstHalf  = h1;
-      const secondHalf = h2;
-      const bench = avail.slice(take);
+      const numSubs = Math.max(0, avail.length - fieldCount);
 
-      const pos1 = fillPositions(firstHalf,  'att');
+      /* ── Not enough players for any sub: fall through to no-sub logic ── */
+      if (numSubs === 0) {
+        const starters = avail.slice(0, fieldCount);
+        const pos = fillPositions(starters);
+        if (gkId) mins[gkId] += FULL;
+        starters.forEach(p => { mins[p.id] += FULL; });
+        return {
+          gk: gkId,
+          att: pos.at, mid: pos.md, def: pos.df,
+          att2: null, mid2: null, def2: null,
+          bench: avail.slice(fieldCount).map(p => p.id),
+        };
+      }
+
+      /* ── Full rotation: enough players for everyone to play one half ── */
+      if (avail.length >= fieldCount * 2) {
+        const selected = avail.slice(0, fieldCount * 2);
+        const bench    = avail.slice(fieldCount * 2);
+        /* Spread attackers/defenders evenly across both halves */
+        const h1 = [], h2 = [];
+        const groups = ["attack", "defense", "neutral"].map(pr =>
+          pr === "neutral"
+            ? selected.filter(p => p.pref !== "attack" && p.pref !== "defense")
+            : selected.filter(p => p.pref === pr)
+        );
+        for (const group of groups) {
+          group.forEach((p, i) => {
+            if (h1.length < fieldCount && (i % 2 === 0 || h2.length >= fieldCount)) h1.push(p);
+            else if (h2.length < fieldCount) h2.push(p);
+            else h1.push(p);
+          });
+        }
+        const pos1 = fillPositions(h1, 'att');
+        const pos2 = fillPositions(h2, 'def');
+        if (gkId) mins[gkId] += FULL;
+        h1.forEach(p => { mins[p.id] += HALF; });
+        h2.forEach(p => { mins[p.id] += HALF; });
+        return {
+          gk: gkId,
+          att: pos1.at, mid: pos1.md, def: pos1.df,
+          att2: pos2.at, mid2: pos2.md, def2: pos2.df,
+          bench: bench.map(p => p.id),
+        };
+      }
+
+      /* ── Partial rotation: numSubs players swap at halftime ──
+         avail is sorted ascending by minutes, so:
+         - avail[0..fieldCount-numSubs-1]: fewest mins → stay the full period
+         - avail[fieldCount-numSubs..fieldCount-1]: more mins → play first half, then rest
+         - avail[fieldCount..]:              most mins → rest first half, play second half
+         This naturally self-balances across periods: full-period players accumulate
+         more mins and drop in priority next period, letting bench players catch up. */
+      const numStay    = fieldCount - numSubs;
+      const firstHalf  = avail.slice(0, fieldCount);
+      const benchPool  = avail.slice(fieldCount);          // come on at halftime
+      const stayers    = firstHalf.slice(0, numStay);      // play full period
+      const comingOff  = firstHalf.slice(numStay);         // play first half only
+      const secondHalf = [...stayers, ...benchPool];
+
+      const pos1 = fillPositions(firstHalf, 'att');
       const pos2 = fillPositions(secondHalf, 'def');
 
       if (gkId) mins[gkId] += FULL;
-      firstHalf.forEach(p  => { mins[p.id] += HALF; });
-      secondHalf.forEach(p => { mins[p.id] += HALF; });
+      stayers.forEach(p   => { mins[p.id] += FULL; });
+      comingOff.forEach(p => { mins[p.id] += HALF; });
+      benchPool.forEach(p => { mins[p.id] += HALF; });
 
-      const usedIds = new Set([gkId, ...selected.map(p => p.id)].filter(Boolean));
       return {
         gk: gkId,
         att: pos1.at, mid: pos1.md, def: pos1.df,
         att2: pos2.at, mid2: pos2.md, def2: pos2.df,
-        bench: bench.map(p => p.id),
+        bench: [],
       };
     } else {
       /* No subs: single formation, full time */
@@ -942,7 +983,7 @@ export default function App() {
                 const hSecs = Math.round(pSecs / 2);
                 const half1Lit = isActivePeriod && timerElapsed < hSecs;
                 const half2Lit = isActivePeriod && timerElapsed >= hSecs;
-                const halfDim = (lit) => ({ opacity: isActivePeriod && !lit ? 0.35 : 1 });
+                const halfDim = (lit) => (isActivePeriod && lit ? { outline: "2px solid #4ade80", outlineOffset: -2, borderRadius: 8 } : {});
                 return (
                 <div key={i}>
                   {/* Mobile break separator between periods */}
