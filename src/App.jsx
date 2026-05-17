@@ -767,7 +767,7 @@ export default function App() {
     </div>
   );
 
-  const PitchHalf = ({ att, mid, def, gk, showGK, periodIdx }) => (
+  const PitchHalf = ({ att, mid, def, gk, showGK, periodIdx, ghAtt, ghMid, ghDef }) => (
     <div style={{
       background: "linear-gradient(180deg, #0a1f12 0%, #0d2818 50%, #0a1f12 100%)",
       padding: "12px 12px 10px", position: "relative",
@@ -776,7 +776,7 @@ export default function App() {
       <div style={{ marginBottom: 4 }}>
         <div style={{ fontSize: 11, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Zap size={11} /> Anfallszon</div>
         <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-          {att.map((id, j) => <PositionSlot key={j} id={id} label={`Anfall ${j + 1}`} periodIdx={periodIdx} />)}
+          {att.map((id, j) => <PositionSlot key={j} id={id} ghostId={ghAtt?.[j]} label={`Anfall ${j + 1}`} periodIdx={periodIdx} />)}
         </div>
       </div>
       <div style={{ textAlign: "center", margin: "10px 0", position: "relative" }}>
@@ -787,13 +787,13 @@ export default function App() {
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Layers size={11} /> Mittfält</div>
           <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-            {(mid ?? []).map((id, j) => <PositionSlot key={j} id={id} label={`Mitt ${j + 1}`} periodIdx={periodIdx} />)}
+            {(mid ?? []).map((id, j) => <PositionSlot key={j} id={id} ghostId={ghMid?.[j]} label={`Mitt ${j + 1}`} periodIdx={periodIdx} />)}
           </div>
         </div>
       )}
       <div style={{ marginBottom: 4 }}>
         <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-          {def.map((id, j) => <PositionSlot key={j} id={id} label={`Försvar ${j + 1}`} periodIdx={periodIdx} />)}
+          {def.map((id, j) => <PositionSlot key={j} id={id} ghostId={ghDef?.[j]} label={`Försvar ${j + 1}`} periodIdx={periodIdx} />)}
         </div>
         <div style={{ fontSize: 11, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={11} /> Försvarszon</div>
       </div>
@@ -808,17 +808,29 @@ export default function App() {
     </div>
   );
 
-  const PositionSlot = ({ id, label, periodIdx }) => (
-    <div style={{ textAlign: "center", flex: "1 1 0", minWidth: 0, maxWidth: 120 }}>
-      <div style={{ fontSize: 11, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5, fontWeight: 600 }}>
-        {label}
+  const PositionSlot = ({ id, label, periodIdx, ghostId }) => {
+    const ghost = ghostId && ghostId !== id ? getP(ghostId) : null;
+    return (
+      <div style={{ textAlign: "center", flex: "1 1 0", minWidth: 0, maxWidth: 120 }}>
+        <div style={{ fontSize: 11, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5, fontWeight: 600 }}>
+          {label}
+        </div>
+        {id
+          ? <Chip id={id} inGKSlot={label === "Målvakt"} periodIdx={periodIdx} />
+          : <div style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 8px", fontSize: 12, color: "#334155" }}>—</div>
+        }
+        {ghost && ghost.enabled !== false && (
+          <div style={{ marginTop: 4, opacity: 0.55, fontSize: 11, color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}
+            title="Byter plats vid halvtid">
+            <ArrowUpDown size={9} />
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {displayName(ghost)}
+            </span>
+          </div>
+        )}
       </div>
-      {id
-        ? <Chip id={id} inGKSlot={label === "Målvakt"} periodIdx={periodIdx} />
-        : <div style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 8px", fontSize: 12, color: "#334155" }}>—</div>
-      }
-    </div>
-  );
+    );
+  };
 
   /* ─── Styles ─── */
   const S = {
@@ -1417,7 +1429,8 @@ export default function App() {
                         <div style={{ flex: 1, minWidth: 0, ...halfDim(half1Lit) }}>
                           <HalfBorder lit={half1Lit} />
                           <HalfLabel text={`1. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                          <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i} />
+                          <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i}
+                            ghAtt={period.att2} ghMid={period.mid2} ghDef={period.def2} />
                         </div>
                         <div style={{
                           display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
@@ -1430,7 +1443,8 @@ export default function App() {
                         <div style={{ flex: 1, minWidth: 0, ...halfDim(half2Lit) }}>
                           <HalfBorder lit={half2Lit} />
                           <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                          <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK periodIdx={i} />
+                          <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK periodIdx={i}
+                            ghAtt={period.att} ghMid={period.mid} ghDef={period.def} />
                         </div>
                       </div>
                     ) : period.att2 != null ? (
@@ -1439,7 +1453,8 @@ export default function App() {
                         <div style={halfDim(half1Lit)}>
                           <HalfBorder lit={half1Lit} />
                           <HalfLabel text={`1. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                          <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i} />
+                          <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i}
+                            ghAtt={period.att2} ghMid={period.mid2} ghDef={period.def2} />
                         </div>
                         <div style={{
                           background: "#061812", borderTop: "1px dashed #1a5c33", borderBottom: "1px dashed #1a5c33",
@@ -1451,7 +1466,8 @@ export default function App() {
                         <div style={halfDim(half2Lit)}>
                           <HalfBorder lit={half2Lit} />
                           <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                          <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK periodIdx={i} />
+                          <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK periodIdx={i}
+                            ghAtt={period.att} ghMid={period.mid} ghDef={period.def} />
                         </div>
                       </>
                     ) : (
