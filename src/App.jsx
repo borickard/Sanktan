@@ -107,7 +107,11 @@ function generatePlan(players, settings) {
   };
 
   const prefRole = { attack: "att", defense: "def", neutral: "mid" };
-  const PREF_BONUS = FULL * 0.5;  // preference is worth ~half a period of imbalance
+  const PREF_BONUS = FULL * 0.5;   // preference is worth ~half a period of imbalance
+  /* Random component is scaled to PREF_BONUS so shuffling actually flips
+     assignments — not just exact ties. Posmins still dominate after a couple
+     of periods because their differences grow past PREF_BONUS. */
+  const RANDOM_SCALE = PREF_BONUS;
 
   /* halfIdx is a tag for the tiebreaker so first/second halves of the same
      period don't get identical noise. */
@@ -120,7 +124,7 @@ function generatePlan(players, settings) {
     const score = (player, role) => {
       let s = -(posMins[player.id]?.[role] ?? 0);
       if (prefRole[player.pref] === role) s += PREF_BONUS;
-      s += hash01(`${player.id}|${role}|${periodIdx}|${halfIdx}|${shuffleSalt}`);
+      s += hash01(`${player.id}|${role}|${periodIdx}|${halfIdx}|${shuffleSalt}`) * RANDOM_SCALE;
       return s;
     };
 
@@ -589,6 +593,7 @@ export default function App() {
     if (originalPlan) { setPlan(originalPlan); setSel(null); }
   };
 
+  const [justShuffled, setJustShuffled] = useState(false);
   const doShuffle = () => {
     if (!plan) return;
     const nextSettings = { ...settings, shuffleSalt: (settings.shuffleSalt ?? 0) + 1 };
@@ -597,6 +602,8 @@ export default function App() {
     setPlan(next);
     setOriginalPlan(next);
     setSel(null);
+    setJustShuffled(true);
+    setTimeout(() => setJustShuffled(false), 1200);
   };
 
   const resetAll = () => {
@@ -1495,8 +1502,14 @@ export default function App() {
                   Speltid — {totalPossible} min totalt
                 </div>
                 <button onClick={doShuffle} title="Slumpa positionerna"
-                  style={{ ...S.btn("secondary"), padding: "6px 10px", fontSize: 12, flexShrink: 0 }}>
-                  <Shuffle size={13} /> Slumpa
+                  style={{
+                    ...S.btn("secondary"),
+                    padding: "6px 10px", fontSize: 12, flexShrink: 0,
+                    background: justShuffled ? "#84cc16" : "#1e293b",
+                    color: justShuffled ? "#0f172a" : "#84cc16",
+                    transition: "background 0.2s, color 0.2s",
+                  }}>
+                  <Shuffle size={13} /> {justShuffled ? "Slumpat!" : "Slumpa"}
                 </button>
               </div>
               {[...activePlayers]
