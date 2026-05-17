@@ -286,6 +286,12 @@ export default function App() {
   const [dragOverIdx, setDragOverIdx] = useState(null);
   const timerSentinelRef = useRef(null);
   const [timerCompact, setTimerCompact] = useState(false);
+  const [collapsedPeriods, setCollapsedPeriods] = useState(() => new Set());
+  const togglePeriod = idx => setCollapsedPeriods(s => {
+    const next = new Set(s);
+    if (next.has(idx)) next.delete(idx); else next.add(idx);
+    return next;
+  });
   const [homeTeam,  setHomeTeam]  = useState(initFromURL?.homeTeam  ?? "");
   const [awayTeam,  setAwayTeam]  = useState(initFromURL?.awayTeam  ?? "");
   const [homeScore, setHomeScore] = useState(initFromURL?.homeScore ?? 0);
@@ -1278,19 +1284,30 @@ export default function App() {
                   }}>
 
                     {/* Period header */}
-                    <div style={{
-                      background: "linear-gradient(135deg, #0a2e1a 0%, #0d3821 100%)",
-                      padding: "10px 16px",
-                      display: "flex", justifyContent: "space-between", alignItems: "center",
-                      borderBottom: "1px solid #1a5c33",
-                    }}>
-                      <div style={{ fontFamily: "'Bebas Neue'", fontSize: 22, letterSpacing: 2, color: "#4ade80" }}>
-                        Period {i + 1}
+                    <div
+                      onClick={() => togglePeriod(i)}
+                      title={collapsedPeriods.has(i) ? "Expandera period" : "Komprimera period"}
+                      style={{
+                        background: "linear-gradient(135deg, #0a2e1a 0%, #0d3821 100%)",
+                        padding: "10px 16px",
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        borderBottom: collapsedPeriods.has(i) ? "none" : "1px solid #1a5c33",
+                        cursor: "pointer", userSelect: "none",
+                      }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {collapsedPeriods.has(i)
+                          ? <ChevronRight size={16} color="#4ade80" />
+                          : <ChevronDown size={16} color="#4ade80" />}
+                        <div style={{ fontFamily: "'Bebas Neue'", fontSize: 22, letterSpacing: 2, color: "#4ade80" }}>
+                          Period {i + 1}
+                        </div>
                       </div>
                       <div style={{ fontSize: 12, color: "#4ade80", opacity: 0.7 }}>
                         {settings.format} &nbsp;·&nbsp; {settings.duration} min
                       </div>
                     </div>
+
+                    {!collapsedPeriods.has(i) && <>
 
                     {/* Pitch — one or two halves */}
                     {period.att2 != null && isDesktop ? (
@@ -1351,6 +1368,8 @@ export default function App() {
                         </div>
                       </div>
                     )}
+
+                    </>}
                   </div>
                 </div>
                 );
