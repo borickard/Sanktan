@@ -799,13 +799,7 @@ export default function App() {
     );
   };
 
-  const HalfLabel = ({ text }) => (
-    <div style={{ fontSize: 11, color: "#4ade80", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", padding: "10px 0 8px", fontWeight: 700, opacity: 0.85 }}>
-      {text}
-    </div>
-  );
-
-  const PitchHalf = ({ att, mid, def, gk, showGK, periodIdx, ghAtt, ghMid, ghDef }) => (
+  const Pitch = ({ att, mid, def, subAtt, subMid, subDef, gk, periodIdx, subsAreLive }) => (
     <div style={{
       background: "linear-gradient(180deg, #0a1f12 0%, #0d2818 50%, #0a1f12 100%)",
       padding: "12px 12px 10px", position: "relative",
@@ -813,8 +807,8 @@ export default function App() {
       <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(180deg, transparent 0px, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px)", pointerEvents: "none" }} />
       <div style={{ marginBottom: 4 }}>
         <div style={{ fontSize: 11, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Zap size={11} /> Anfallszon</div>
-        <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-          {att.map((id, j) => <PositionSlot key={j} id={id} ghostId={ghAtt?.[j]} label={`Anfall ${j + 1}`} periodIdx={periodIdx} />)}
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, alignItems: "flex-start" }}>
+          {att.map((id, j) => <PositionSlot key={j} starterId={id} subId={subAtt?.[j]} label={`Anfall ${j + 1}`} periodIdx={periodIdx} subsAreLive={subsAreLive} />)}
         </div>
       </div>
       <div style={{ textAlign: "center", margin: "10px 0", position: "relative" }}>
@@ -824,46 +818,53 @@ export default function App() {
       {fmt.mid > 0 && (
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Layers size={11} /> Mittfält</div>
-          <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-            {(mid ?? []).map((id, j) => <PositionSlot key={j} id={id} ghostId={ghMid?.[j]} label={`Mitt ${j + 1}`} periodIdx={periodIdx} />)}
+          <div style={{ display: "flex", justifyContent: "center", gap: 8, alignItems: "flex-start" }}>
+            {(mid ?? []).map((id, j) => <PositionSlot key={j} starterId={id} subId={subMid?.[j]} label={`Mitt ${j + 1}`} periodIdx={periodIdx} subsAreLive={subsAreLive} />)}
           </div>
         </div>
       )}
       <div style={{ marginBottom: 4 }}>
-        <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-          {def.map((id, j) => <PositionSlot key={j} id={id} ghostId={ghDef?.[j]} label={`Försvar ${j + 1}`} periodIdx={periodIdx} />)}
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, alignItems: "flex-start" }}>
+          {def.map((id, j) => <PositionSlot key={j} starterId={id} subId={subDef?.[j]} label={`Försvar ${j + 1}`} periodIdx={periodIdx} subsAreLive={subsAreLive} />)}
         </div>
         <div style={{ fontSize: 11, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={11} /> Försvarszon</div>
       </div>
-      {showGK && fmt.hasGK && (
+      {fmt.hasGK && (
         <>
           <div style={{ borderTop: "2px solid #1a5c33", margin: "10px 0" }} />
           <div style={{ display: "flex", justifyContent: "center" }}>
-            <PositionSlot id={gk} label="Målvakt" periodIdx={periodIdx} />
+            <PositionSlot starterId={gk} label="Målvakt" periodIdx={periodIdx} subsAreLive={false} />
           </div>
         </>
       )}
     </div>
   );
 
-  const PositionSlot = ({ id, label, periodIdx, ghostId }) => {
-    const ghost = ghostId && ghostId !== id ? getP(ghostId) : null;
+  /* Each pitch slot shows the starter (1st half) with the sub (2nd half) below
+     when there's a halftime rotation. Both are always visible; opacity flips
+     so the coach can see who's currently on and who's coming in. */
+  const PositionSlot = ({ starterId, subId, label, periodIdx, subsAreLive }) => {
+    const starter = starterId ? getP(starterId) : null;
+    const sub = (subId && subId !== starterId) ? getP(subId) : null;
+    const showStarter = starter && starter.enabled !== false;
+    const showSub = sub && sub.enabled !== false;
+    const isGKLabel = label === "Målvakt";
     return (
       <div style={{ textAlign: "center", flex: "1 1 0", minWidth: 0, maxWidth: 120 }}>
         <div style={{ fontSize: 11, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5, fontWeight: 600 }}>
           {label}
         </div>
-        {id
-          ? <Chip id={id} inGKSlot={label === "Målvakt"} periodIdx={periodIdx} />
-          : <div style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 8px", fontSize: 12, color: "#334155" }}>—</div>
-        }
-        {ghost && ghost.enabled !== false && (
-          <div style={{ marginTop: 4, opacity: 0.55, fontSize: 11, color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}
-            title="Byter plats vid halvtid">
-            <ArrowUpDown size={9} />
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {displayName(ghost)}
-            </span>
+        {showStarter ? (
+          <div style={{ opacity: subsAreLive ? 0.35 : 1, transition: "opacity 0.25s" }}>
+            <Chip id={starterId} inGKSlot={isGKLabel} periodIdx={periodIdx} />
+          </div>
+        ) : !starter && (
+          <div style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 8px", fontSize: 12, color: "#334155" }}>—</div>
+        )}
+        {showSub && (
+          <div style={{ marginTop: 5, opacity: subsAreLive ? 1 : 0.35, transition: "opacity 0.25s", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+            <ArrowUpDown size={10} color="#64748b" style={{ flexShrink: 0 }} />
+            <Chip id={subId} inGKSlot={isGKLabel} periodIdx={periodIdx} />
           </div>
         )}
       </div>
@@ -1408,15 +1409,10 @@ export default function App() {
             <div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: isDesktop ? 24 : 0 }}>
               {plan.map((period, i) => {
-                const isActivePeriod = i === timerPeriod && period.att2 != null;
                 const pSecs = settings.duration * 60;
                 const hSecs = Math.round(pSecs / 2);
-                const half1Lit = isActivePeriod && timerElapsed < hSecs;
-                const half2Lit = isActivePeriod && timerElapsed >= hSecs;
-                const halfDim = (lit) => (isActivePeriod && lit ? { position: "relative" } : { position: "relative" });
-                const HalfBorder = ({ lit }) => (isActivePeriod && lit)
-                  ? <div style={{ position: "absolute", inset: 0, border: "2px solid #4ade80", pointerEvents: "none", zIndex: 10 }} />
-                  : null;
+                const subsAreLive = i === timerPeriod && period.att2 != null && timerElapsed >= hSecs;
+                const hasBench = period.bench.length > 0;
                 return (
                 <div key={i}>
                   {/* Mobile break separator between periods */}
@@ -1458,73 +1454,32 @@ export default function App() {
                       </div>
                     </div>
 
-                    {!collapsedPeriods.has(i) && <>
-
-                    {/* Pitch — one or two halves */}
-                    {period.att2 != null && isDesktop ? (
-                      /* Desktop: halves side by side */
-                      <div style={{ display: "flex" }}>
-                        <div style={{ flex: 1, minWidth: 0, ...halfDim(half1Lit) }}>
-                          <HalfBorder lit={half1Lit} />
-                          <HalfLabel text={`1. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                          <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i}
-                            ghAtt={period.att2} ghMid={period.mid2} ghDef={period.def2} />
+                    {!collapsedPeriods.has(i) && (
+                      <div style={isDesktop && hasBench ? { display: "grid", gridTemplateColumns: "1fr 150px", alignItems: "stretch" } : {}}>
+                        <div>
+                          <Pitch
+                            att={period.att} mid={period.mid} def={period.def}
+                            subAtt={period.att2} subMid={period.mid2} subDef={period.def2}
+                            gk={period.gk} periodIdx={i} subsAreLive={subsAreLive}
+                          />
                         </div>
-                        <div style={{
-                          display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
-                          padding: "0 14px", background: "#061812",
-                          borderLeft: "1px dashed #1a5c33", borderRight: "1px dashed #1a5c33",
-                        }}>
-                          <span style={{ fontSize: 12, color: "#4ade80", fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", writingMode: "vertical-lr", transform: "rotate(180deg)" }}>HALVTID</span>
-                          {fmt.hasGK && <span style={{ fontSize: 11, color: "#94a3b8", writingMode: "vertical-lr", transform: "rotate(180deg)", marginTop: 8 }}>MV stannar</span>}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0, ...halfDim(half2Lit) }}>
-                          <HalfBorder lit={half2Lit} />
-                          <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                          <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK periodIdx={i}
-                            ghAtt={period.att} ghMid={period.mid} ghDef={period.def} />
-                        </div>
-                      </div>
-                    ) : period.att2 != null ? (
-                      /* Stacked layout (mobile or periods 2+) */
-                      <>
-                        <div style={halfDim(half1Lit)}>
-                          <HalfBorder lit={half1Lit} />
-                          <HalfLabel text={`1. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                          <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i}
-                            ghAtt={period.att2} ghMid={period.mid2} ghDef={period.def2} />
-                        </div>
-                        <div style={{
-                          background: "#061812", borderTop: "1px dashed #1a5c33", borderBottom: "1px dashed #1a5c33",
-                          padding: "7px 14px", display: "flex", justifyContent: "center", alignItems: "center", gap: 10,
-                        }}>
-                          <span style={{ fontSize: 13, color: "#4ade80", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", display: "inline-flex", alignItems: "center", gap: 5 }}><ArrowUpDown size={13} /> HALVTID</span>
-                          {fmt.hasGK && <span style={{ fontSize: 12, color: "#94a3b8" }}>MV stannar · alla utespelare byts</span>}
-                        </div>
-                        <div style={halfDim(half2Lit)}>
-                          <HalfBorder lit={half2Lit} />
-                          <HalfLabel text={`2. Halvlek · ${Math.round(settings.duration / 2)} min`} />
-                          <PitchHalf att={period.att2} mid={period.mid2} def={period.def2} gk={period.gk} showGK periodIdx={i}
-                            ghAtt={period.att} ghMid={period.mid} ghDef={period.def} />
-                        </div>
-                      </>
-                    ) : (
-                      <PitchHalf att={period.att} mid={period.mid} def={period.def} gk={period.gk} showGK periodIdx={i} />
-                    )}
-
-                    {/* Bench row */}
-                    {period.bench.length > 0 && (
-                      <div style={{ background: "#111827", borderTop: "1px solid #1e293b", padding: "8px 14px" }}>
-                        <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7, fontWeight: 600 }}>
-                          Hel period på bänken
-                        </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                          {period.bench.map(id => <Chip key={id} id={id} small periodIdx={i} />)}
-                        </div>
+                        {hasBench && (
+                          <div style={{
+                            background: "#0d1a26",
+                            ...(isDesktop
+                              ? { borderLeft: "1px solid #1e293b", padding: "12px 12px" }
+                              : { borderTop: "1px solid #1e293b", padding: "10px 14px" }),
+                          }}>
+                            <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7, fontWeight: 600 }}>
+                              Bänk
+                            </div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, flexDirection: isDesktop ? "column" : "row", alignItems: isDesktop ? "stretch" : "center" }}>
+                              {period.bench.map(id => <Chip key={id} id={id} small periodIdx={i} />)}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
-
-                    </>}
                   </div>
                 </div>
                 );
