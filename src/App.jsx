@@ -17,8 +17,8 @@ const bumpUid = (players) => {
 
 /* ─── Constants ─── */
 const PREFS = [
-  { key: "neutral", label: "Mix",      Icon: Shuffle, color: "#f97316" },
   { key: "attack",  label: "Anfall",   Icon: Zap,     color: "#ef4444" },
+  { key: "neutral", label: "Mix",      Icon: Shuffle, color: "#f97316" },
   { key: "defense", label: "Defensiv", Icon: Shield,  color: "#facc15" },
 ];
 const GK_COLOR = "#22c55e";
@@ -55,7 +55,7 @@ const _dec = raw => decodeURIComponent(
 );
 
 const packURL  = ({ players, settings, homeTeam, awayTeam, homeScore, awayScore }) => ({
-  p: players.map(p => [p.id, p.name, p.isGK ? 1 : 0, p.pref[0], p.enabled === false ? 0 : 1]),
+  p: players.map(p => [p.id, p.name, p.isGK ? 1 : 0, p.pref?.[0] ?? "", p.enabled === false ? 0 : 1]),
   s: [settings.format, settings.periods, settings.duration, settings.subs, settings.shuffleSalt ?? 0, settings.positions === false ? 0 : 1],
   h: homeTeam, a: awayTeam, hs: homeScore, as: awayScore,
 });
@@ -63,7 +63,7 @@ const packURL  = ({ players, settings, homeTeam, awayTeam, homeScore, awayScore 
 const unpackURL = c => {
   const pr = { a: "attack", n: "neutral", d: "defense" };
   return {
-    players: c.p.map(([id, name, gk, pref, en]) => ({ id, name, isGK: !!gk, pref: pr[pref] ?? "neutral", enabled: en !== 0 })),
+    players: c.p.map(([id, name, gk, pref, en]) => ({ id, name, isGK: !!gk, pref: pr[pref] ?? null, enabled: en !== 0 })),
     settings: { format: c.s[0], periods: c.s[1], duration: c.s[2], subs: c.s[3], shuffleSalt: c.s[4] ?? 0, positions: c.s[5] === 0 ? false : true },
     homeTeam: c.h ?? "", awayTeam: c.a ?? "", homeScore: c.hs ?? 0, awayScore: c.as ?? 0,
   };
@@ -96,7 +96,12 @@ function generatePlan(players, settings) {
   const shuffleSalt = settings.shuffleSalt ?? 0;
 
   const gks = fmt.hasGK ? players.filter(p => p.isGK) : [];
+  /* Total minutes per player — used for display only. */
   const mins = Object.fromEntries(players.map(p => [p.id, 0]));
+  /* Outfield-only minutes — drives the avail/segment sort. Splitting it from
+     total mins is what stops a GK who already played their goalkeeper period
+     from being pushed to the bottom of the outfield rotation by their GK time. */
+  const outfieldMins = Object.fromEntries(players.map(p => [p.id, 0]));
   /* posMins tracks cumulative minutes each player has played at each outfield
      position, so the assignment can pull them toward their least-played role. */
   const posMins = Object.fromEntries(players.map(p => [p.id, { att: 0, mid: 0, def: 0 }]));
@@ -193,11 +198,15 @@ function generatePlan(players, settings) {
         : [...players].sort((a, b) => mins[b.id] - mins[a.id])[0].id;
     }
 
+    /* avail = outfield candidates for this period.
+       - Excludes the current GK.
+       - Excludes "GK-only" players (isGK && pref is null): they take their GK
+         period via gks rotation and don't play outfield at all. */
     const avail = players
-      .filter(p => p.id !== gkId)
+      .filter(p => p.id !== gkId && !(p.isGK && !p.pref))
       .sort((a, b) => {
-        const ja = mins[a.id] + hash01(`avail|${a.id}|${i}|${shuffleSalt}`) * PREF_BONUS;
-        const jb = mins[b.id] + hash01(`avail|${b.id}|${i}|${shuffleSalt}`) * PREF_BONUS;
+        const ja = outfieldMins[a.id] + hash01(`avail|${a.id}|${i}|${shuffleSalt}`) * PREF_BONUS;
+        const jb = outfieldMins[b.id] + hash01(`avail|${b.id}|${i}|${shuffleSalt}`) * PREF_BONUS;
         return ja - jb;
       });
 
@@ -205,7 +214,9 @@ function generatePlan(players, settings) {
 
     /* For each segment, pick fieldCount players using a multi-key sort:
          1. fewest segments played this period (forces rotation),
-         2. fewest cumulative minutes overall (cross-period fairness),
+         2. fewest outfield minutes overall (cross-period fairness — GK time
+            doesn't count here, otherwise a player who just rotated through GK
+            would be permanently deprioritized for outfield play),
          3. small random + previous-period rest penalty for segment 0. */
     const segmentsPlayedThisPeriod = {};
     const lineups = [];
@@ -214,7 +225,7 @@ function generatePlan(players, settings) {
     for (let k = 0; k < segCount; k++) {
       const sortKey = p => {
         const segs = segmentsPlayedThisPeriod[p.id] ?? 0;
-        let secondary = mins[p.id];
+        let secondary = outfieldMins[p.id];
         if (k === 0 && lastSegmentIds.has(p.id)) secondary += REST_PENALTY;
         secondary += hash01(`seg|${p.id}|${i}|${k}|${shuffleSalt}`) * PREF_BONUS;
         return [segs, secondary];
@@ -229,6 +240,7 @@ function generatePlan(players, settings) {
       segPlayers.forEach(p => {
         segmentsPlayedThisPeriod[p.id] = (segmentsPlayedThisPeriod[p.id] ?? 0) + 1;
         mins[p.id] += segMin;
+        outfieldMins[p.id] += segMin;
       });
 
       const pos = fillPositions(segPlayers, i, k, prevPosByPlayer);
@@ -1081,10 +1093,11 @@ export default function App() {
                 </button>
 
                 {settings.positions !== false && (
-                  <div style={{ display: "flex", gap: 3 }}>
+                  <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
                     {PREFS.map(pr => (
-                      <button key={pr.key} onClick={() => updP(p.id, "pref", pr.key)}
-                        title={pr.label}
+                      <button key={pr.key}
+                        onClick={() => updP(p.id, "pref", p.pref === pr.key ? null : pr.key)}
+                        title={p.pref === pr.key ? `${pr.label} (klicka för att ta bort)` : pr.label}
                         style={{
                           background: p.pref === pr.key ? pr.color : "#1a2940",
                           border: "none", borderRadius: 6, padding: "3px 7px",
@@ -1095,6 +1108,12 @@ export default function App() {
                         <pr.Icon size={12} />
                       </button>
                     ))}
+                    {p.isGK && !p.pref && (
+                      <span title="Spelar endast som målvakt"
+                        style={{ fontSize: 10, color: GK_COLOR, marginLeft: 2, whiteSpace: "nowrap", letterSpacing: 0.5, fontWeight: 600 }}>
+                        endast
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -1583,7 +1602,7 @@ export default function App() {
                   const m = mins[p.id] ?? 0;
                   const pct = totalPossible > 0 ? (m / totalPossible) * 100 : 0;
                   const pref = PM[p.pref];
-                  const barColor = p.isGK ? GK_COLOR : pref.color;
+                  const barColor = p.isGK ? GK_COLOR : (pref?.color ?? "#94a3b8");
                   const textColor = pct >= 75 ? "#4ade80" : pct >= 45 ? "#fbbf24" : "#f87171";
 
                   const ps = posStats[p.id] ?? {};
@@ -1602,7 +1621,7 @@ export default function App() {
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           {p.isGK
                             ? <span style={{ fontSize: 11, background: GK_COLOR, color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
-                            : showPositions && <pref.Icon size={12} color={pref.color} />
+                            : showPositions && pref && <pref.Icon size={12} color={pref.color} />
                           }
                           <span style={{ fontSize: 13, color: "#cbd5e1" }}>{displayName(p)}</span>
                         </div>
@@ -1678,6 +1697,16 @@ export default function App() {
 
           </div>
         )}
+      </div>
+
+      <div style={{ padding: "24px 20px 28px", textAlign: "center", fontSize: 12, color: "#475569", lineHeight: 1.6 }}>
+        Matchplaneraren är ett verktyg framtaget av{" "}
+        <a href="https://www.linkedin.com/in/rickardberggren/"
+          target="_blank" rel="noopener noreferrer"
+          style={{ color: "#84cc16", textDecoration: "none", fontWeight: 600 }}>
+          Rickard Berggren
+        </a>
+        , ledare i Mälarhöjden-Hägersten FF
       </div>
     </div>
   );
