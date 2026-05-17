@@ -313,9 +313,23 @@ export default function App() {
   const [shareUrl,     setShareUrl]     = useState(null);
   const [kvLoading, setKvLoading] = useState(isShortCode);
   const [winW, setWinW]     = useState(window.innerWidth);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [timerElapsed, setTimerElapsed] = useState(0); // seconds
-  const [timerPeriod,  setTimerPeriod]  = useState(0); // 0-indexed
+  /* Restore the match timer across page refresh. If it was running, advance
+     elapsed by wall-clock delta since the last save so it keeps wall time. */
+  const restoredTimer = (() => {
+    try {
+      const raw = localStorage.getItem("sanktan-timer-v1");
+      if (!raw) return null;
+      const d = JSON.parse(raw);
+      let elapsed = d.elapsed ?? 0;
+      if (d.running && d.startedAt) {
+        elapsed = (d.baseElapsed ?? 0) + Math.floor((Date.now() - d.startedAt) / 1000);
+      }
+      return { period: d.period ?? 0, elapsed: Math.max(0, elapsed), running: !!d.running };
+    } catch { return null; }
+  })();
+  const [timerRunning, setTimerRunning] = useState(restoredTimer?.running ?? false);
+  const [timerElapsed, setTimerElapsed] = useState(restoredTimer?.elapsed ?? 0); // seconds
+  const [timerPeriod,  setTimerPeriod]  = useState(restoredTimer?.period ?? 0); // 0-indexed
   const timerRef        = useRef(null);
   const switchSounded   = useRef(false);
   const endSounded      = useRef(false);
@@ -427,11 +441,21 @@ export default function App() {
     endSounded.current    = false;
   }, [timerPeriod]);
 
-  /* Trigger sounds when the timer crosses a threshold while running */
+  /* Trigger sounds when the timer crosses a threshold while running.
+     On the first run after a page refresh, sync the "already played" flags
+     to the restored elapsed instead of replaying the beep for a threshold
+     that was crossed before the refresh. */
+  const firstSoundCheck = useRef(true);
   useEffect(() => {
     if (!timerRunning) return;
     const pSecs = settings.duration * 60;
     const hSecs = pSecs / 2;
+    if (firstSoundCheck.current) {
+      firstSoundCheck.current = false;
+      switchSounded.current = timerElapsed >= hSecs;
+      endSounded.current    = timerElapsed >= pSecs;
+      return;
+    }
     if (timerElapsed < hSecs) switchSounded.current = false;
     if (timerElapsed < pSecs) endSounded.current    = false;
     if (settings.subs >= 1 && timerElapsed >= hSecs && timerElapsed < pSecs && !switchSounded.current) {
@@ -492,6 +516,19 @@ export default function App() {
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [timerRunning]);
+
+  /* Persist timer state so refreshing the page doesn't lose match progress. */
+  useEffect(() => {
+    try {
+      localStorage.setItem("sanktan-timer-v1", JSON.stringify({
+        period: timerPeriod,
+        elapsed: timerElapsed,
+        running: timerRunning,
+        startedAt: timerRunning ? startedAtRef.current : null,
+        baseElapsed: timerRunning ? baseElapsedRef.current : timerElapsed,
+      }));
+    } catch {}
+  }, [timerPeriod, timerElapsed, timerRunning]);
 
   /* Seek the running timer without losing wall-clock anchor. */
   const seekTimer = next => {
@@ -573,6 +610,7 @@ export default function App() {
     setTab("players");
     setTimerRunning(false); setTimerElapsed(0); setTimerPeriod(0);
     setNewName("");
+    try { localStorage.removeItem("sanktan-timer-v1"); } catch {}
   };
 
   const copyShareUrl = async () => {
