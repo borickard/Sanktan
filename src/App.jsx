@@ -50,7 +50,7 @@ const _dec = raw => decodeURIComponent(
 
 const packURL  = ({ players, settings, homeTeam, awayTeam, homeScore, awayScore }) => ({
   p: players.map(p => [p.id, p.name, p.isGK ? 1 : 0, p.pref[0], p.enabled === false ? 0 : 1]),
-  s: [settings.format, settings.periods, settings.duration, settings.subs],
+  s: [settings.format, settings.periods, settings.duration, settings.subs, settings.shuffleSalt ?? 0],
   h: homeTeam, a: awayTeam, hs: homeScore, as: awayScore,
 });
 
@@ -58,7 +58,7 @@ const unpackURL = c => {
   const pr = { a: "attack", n: "neutral", d: "defense" };
   return {
     players: c.p.map(([id, name, gk, pref, en]) => ({ id, name, isGK: !!gk, pref: pr[pref] ?? "neutral", enabled: en !== 0 })),
-    settings: { format: c.s[0], periods: c.s[1], duration: c.s[2], subs: c.s[3] },
+    settings: { format: c.s[0], periods: c.s[1], duration: c.s[2], subs: c.s[3], shuffleSalt: c.s[4] ?? 0 },
     homeTeam: c.h ?? "", awayTeam: c.a ?? "", homeScore: c.hs ?? 0, awayScore: c.as ?? 0,
   };
 };
@@ -86,41 +86,72 @@ function generatePlan(players, settings) {
   const fmt = FM[settings.format] ?? FM["5v5"];
   const FULL = duration;
   const fieldCount = fmt.att + fmt.mid + fmt.def;
+  const shuffleSalt = settings.shuffleSalt ?? 0;
 
   const gks = fmt.hasGK ? players.filter(p => p.isGK) : [];
   const mins = Object.fromEntries(players.map(p => [p.id, 0]));
+  /* posMins tracks cumulative minutes each player has played at each outfield
+     position, so the assignment can pull them toward their least-played role. */
+  const posMins = Object.fromEntries(players.map(p => [p.id, { att: 0, mid: 0, def: 0 }]));
 
-  /* neutralBonus: 'att' | 'def' — which side neutral overflow players prefer */
-  const fillPositions = (pool, neutralBonus = 'att') => {
-    const at = [], md = [], df = [];
-    const used = new Set();
-    const place = (arr, max, id) => { if (arr.length < max) { arr.push(id); used.add(id); return true; } return false; };
-
-    /* Strict pref matching */
-    for (const p of pool) {
-      if (p.pref === "attack")  place(at, fmt.att, p.id);
-      if (p.pref === "defense") place(df, fmt.def, p.id);
-      if (p.pref === "neutral") place(md, fmt.mid, p.id);
+  /* Deterministic pseudo-random in [0,1) keyed by a string. Used as a small
+     tiebreaker so equal-score candidates don't collapse to array order, and
+     so the shuffle button can produce a different valid distribution. */
+  const hash01 = (str) => {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
     }
-    /* Neutral overflow: alternate att/def to let mix players play both sides */
-    for (const p of pool.filter(p => p.pref === "neutral" && !used.has(p.id))) {
-      if (neutralBonus === 'att') {
-        place(at, fmt.att, p.id) || place(md, fmt.mid, p.id) || place(df, fmt.def, p.id);
-      } else {
-        place(df, fmt.def, p.id) || place(md, fmt.mid, p.id) || place(at, fmt.att, p.id);
+    return (h >>> 0) / 4294967296;
+  };
+
+  const prefRole = { attack: "att", defense: "def", neutral: "mid" };
+  const PREF_BONUS = FULL * 0.5;  // preference is worth ~half a period of imbalance
+
+  /* halfIdx is a tag for the tiebreaker so first/second halves of the same
+     period don't get identical noise. */
+  const fillPositions = (pool, periodIdx, halfIdx) => {
+    const limits = { att: fmt.att, mid: fmt.mid, def: fmt.def };
+    const counts = { att: 0, mid: 0, def: 0 };
+    const remaining = [...pool];
+    const result = { at: [], md: [], df: [] };
+
+    const score = (player, role) => {
+      let s = -(posMins[player.id]?.[role] ?? 0);
+      if (prefRole[player.pref] === role) s += PREF_BONUS;
+      s += hash01(`${player.id}|${role}|${periodIdx}|${halfIdx}|${shuffleSalt}`);
+      return s;
+    };
+
+    /* Greedy assignment: each step picks the (player, role) pair with the
+       highest score across all remaining players and open roles. */
+    while (remaining.length > 0 && counts.att + counts.mid + counts.def < fieldCount) {
+      let best = null;
+      for (const player of remaining) {
+        for (const role of ["att", "mid", "def"]) {
+          if (counts[role] >= limits[role]) continue;
+          const s = score(player, role);
+          if (best === null || s > best.score) best = { player, role, score: s };
+        }
       }
+      if (!best) break;
+      const arr = best.role === "att" ? result.at : best.role === "mid" ? result.md : result.df;
+      arr.push(best.player.id);
+      counts[best.role]++;
+      remaining.splice(remaining.indexOf(best.player), 1);
     }
-    /* Attack overflow: stay in att/mid, avoid def */
-    for (const p of pool.filter(p => p.pref === "attack" && !used.has(p.id)))
-      place(at, fmt.att, p.id) || place(md, fmt.mid, p.id) || place(df, fmt.def, p.id);
-    /* Defense overflow: stay in def/mid, avoid att */
-    for (const p of pool.filter(p => p.pref === "defense" && !used.has(p.id)))
-      place(df, fmt.def, p.id) || place(md, fmt.mid, p.id) || place(at, fmt.att, p.id);
 
-    while (at.length < fmt.att) at.push(null);
-    while (md.length < fmt.mid) md.push(null);
-    while (df.length < fmt.def) df.push(null);
-    return { at, md, df };
+    while (result.at.length < fmt.att) result.at.push(null);
+    while (result.md.length < fmt.mid) result.md.push(null);
+    while (result.df.length < fmt.def) result.df.push(null);
+    return result;
+  };
+
+  const applyPosMins = (pos, minsToAdd) => {
+    pos.at.forEach(id => { if (id) posMins[id].att += minsToAdd; });
+    pos.md.forEach(id => { if (id) posMins[id].mid += minsToAdd; });
+    pos.df.forEach(id => { if (id) posMins[id].def += minsToAdd; });
   };
 
   return Array.from({ length: periods }, (_, i) => {
@@ -142,7 +173,8 @@ function generatePlan(players, settings) {
       /* ── Not enough players for any sub: fall through to no-sub logic ── */
       if (numSubs === 0) {
         const starters = avail.slice(0, fieldCount);
-        const pos = fillPositions(starters);
+        const pos = fillPositions(starters, i, 0);
+        applyPosMins(pos, FULL);
         if (gkId) mins[gkId] += FULL;
         starters.forEach(p => { mins[p.id] += FULL; });
         return {
@@ -171,8 +203,10 @@ function generatePlan(players, settings) {
             else h1.push(p);
           });
         }
-        const pos1 = fillPositions(h1, 'att');
-        const pos2 = fillPositions(h2, 'def');
+        const pos1 = fillPositions(h1, i, 0);
+        applyPosMins(pos1, HALF);
+        const pos2 = fillPositions(h2, i, 1);
+        applyPosMins(pos2, HALF);
         if (gkId) mins[gkId] += FULL;
         h1.forEach(p => { mins[p.id] += HALF; });
         h2.forEach(p => { mins[p.id] += HALF; });
@@ -198,8 +232,10 @@ function generatePlan(players, settings) {
       const comingOff  = firstHalf.slice(numStay);         // play first half only
       const secondHalf = [...stayers, ...benchPool];
 
-      const pos1 = fillPositions(firstHalf, 'att');
-      const pos2 = fillPositions(secondHalf, 'def');
+      const pos1 = fillPositions(firstHalf, i, 0);
+      applyPosMins(pos1, HALF);
+      const pos2 = fillPositions(secondHalf, i, 1);
+      applyPosMins(pos2, HALF);
 
       if (gkId) mins[gkId] += FULL;
       stayers.forEach(p   => { mins[p.id] += FULL; });
@@ -215,7 +251,8 @@ function generatePlan(players, settings) {
     } else {
       /* No subs: single formation, full time */
       const starters = avail.slice(0, fieldCount);
-      const pos = fillPositions(starters);
+      const pos = fillPositions(starters, i, 0);
+      applyPosMins(pos, FULL);
 
       if (gkId) mins[gkId] += FULL;
       starters.forEach(p => { mins[p.id] += FULL; });
@@ -263,7 +300,7 @@ export default function App() {
   const [players, setPlayers] = useState(initFromURL?.players ?? DEMO);
   const [newName, setNewName] = useState("");
   const [settings, setSettings] = useState({
-    periods: 3, duration: 15, subs: 1, format: "5v5",
+    periods: 3, duration: 15, subs: 1, format: "5v5", shuffleSalt: 0,
     ...(initFromURL?.settings ?? {}),
   });
   const [plan, setPlan]         = useState(() => initFromURL ? generatePlan(initFromURL.players.filter(p => p.enabled !== false), initFromURL.settings) : null);
@@ -515,10 +552,20 @@ export default function App() {
     if (originalPlan) { setPlan(originalPlan); setSel(null); }
   };
 
+  const doShuffle = () => {
+    if (!plan) return;
+    const nextSettings = { ...settings, shuffleSalt: (settings.shuffleSalt ?? 0) + 1 };
+    setSettings(nextSettings);
+    const next = generatePlan(activePlayers, nextSettings);
+    setPlan(next);
+    setOriginalPlan(next);
+    setSel(null);
+  };
+
   const resetAll = () => {
     if (!window.confirm("Återställ allt till standardvärden?")) return;
     setPlayers([...DEMO]);
-    setSettings({ periods: 3, duration: 15, subs: 1, format: "5v5" });
+    setSettings({ periods: 3, duration: 15, subs: 1, format: "5v5", shuffleSalt: 0 });
     setHomeTeam(""); setAwayTeam("");
     setHomeScore(0); setAwayScore(0);
     setPlan(null); setOriginalPlan(null);
@@ -1434,11 +1481,14 @@ export default function App() {
             {/* ─── Right column: Playing time summary ─── */}
             <div style={isDesktop ? { position: "sticky", top: 0 } : { marginTop: 24 }}>
             <div style={{ ...S.card, padding: "16px" }}>
-              <div style={{
-                fontFamily: "'Bebas Neue'", fontSize: 20, letterSpacing: 2,
-                color: "#94a3b8", marginBottom: 14,
-              }}>
-                Speltid — {totalPossible} min totalt
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 10 }}>
+                <div style={{ fontFamily: "'Bebas Neue'", fontSize: 20, letterSpacing: 2, color: "#94a3b8" }}>
+                  Speltid — {totalPossible} min totalt
+                </div>
+                <button onClick={doShuffle} title="Slumpa positionerna"
+                  style={{ ...S.btn("secondary"), padding: "6px 10px", fontSize: 12, flexShrink: 0 }}>
+                  <Shuffle size={13} /> Slumpa
+                </button>
               </div>
               {[...activePlayers]
                 .sort((a, b) => (mins[b.id] ?? 0) - (mins[a.id] ?? 0))
