@@ -600,11 +600,9 @@ export default function App() {
   };
 
   const addPlayer = () => {
-    const n = newName.trim();
-    if (!n) return;
     setPlayers(ps => {
       bumpUid(ps);
-      return [...ps, mkP(n)];
+      return [...ps, mkP(newName.trim())];
     });
     setNewName("");
   };
