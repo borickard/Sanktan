@@ -108,10 +108,10 @@ function generatePlan(players, settings) {
 
   const prefRole = { attack: "att", defense: "def", neutral: "mid" };
   const PREF_BONUS = FULL * 0.5;   // preference is worth ~half a period of imbalance
-  /* Random component is scaled to PREF_BONUS so shuffling actually flips
-     assignments — not just exact ties. Posmins still dominate after a couple
-     of periods because their differences grow past PREF_BONUS. */
-  const RANDOM_SCALE = PREF_BONUS;
+  /* Random component scaled to FULL so a shuffle can override both preference
+     bonus (FULL/2) AND a single-period posMins imbalance (≈FULL/2). After a
+     couple of periods, posMins differences grow past FULL and dominate again. */
+  const RANDOM_SCALE = FULL;
 
   /* halfIdx is a tag for the tiebreaker so first/second halves of the same
      period don't get identical noise. */
@@ -168,7 +168,14 @@ function generatePlan(players, settings) {
 
     const avail = players
       .filter(p => p.id !== gkId)
-      .sort((a, b) => mins[a.id] - mins[b.id]);
+      .sort((a, b) => {
+        /* Cumulative minutes drives the lineup choice. Hash on (player, period,
+           salt) breaks ties and lets Slumpa rotate who sits out when minutes
+           are close. Scale is small (PREF_BONUS) so big mins gaps still win. */
+        const ja = mins[a.id] + hash01(`avail|${a.id}|${i}|${shuffleSalt}`) * PREF_BONUS;
+        const jb = mins[b.id] + hash01(`avail|${b.id}|${i}|${shuffleSalt}`) * PREF_BONUS;
+        return ja - jb;
+      });
 
     if (subs >= 1) {
       const HALF = FULL / 2;
@@ -238,7 +245,36 @@ function generatePlan(players, settings) {
 
       const pos1 = fillPositions(firstHalf, i, 0);
       applyPosMins(pos1, HALF);
-      const pos2 = fillPositions(secondHalf, i, 1);
+
+      /* Lock stayers to the same role in both halves so the only "subs" the UI
+         shows are real player swaps, not a stayer rotating positions across
+         halves. Replace each comingOff slot with the best-fit benchPool player. */
+      const pos2 = { at: [...pos1.at], md: [...pos1.md], df: [...pos1.df] };
+      const comingOffIds = new Set(comingOff.map(p => p.id));
+      const swapSlots = [];
+      for (const role of ["at", "md", "df"]) {
+        pos2[role].forEach((id, j) => {
+          if (id && comingOffIds.has(id)) swapSlots.push({ role, j });
+        });
+      }
+      const roleKey = { at: "att", md: "mid", df: "def" };
+      const remainingBench = [...benchPool];
+      while (remainingBench.length > 0 && swapSlots.length > 0) {
+        let best = null;
+        for (const player of remainingBench) {
+          for (const slot of swapSlots) {
+            const r = roleKey[slot.role];
+            let s = -(posMins[player.id]?.[r] ?? 0);
+            if (prefRole[player.pref] === r) s += PREF_BONUS;
+            s += hash01(`${player.id}|${r}|${i}|1|${shuffleSalt}`) * RANDOM_SCALE;
+            if (best === null || s > best.score) best = { player, slot, score: s };
+          }
+        }
+        if (!best) break;
+        pos2[best.slot.role][best.slot.j] = best.player.id;
+        remainingBench.splice(remainingBench.indexOf(best.player), 1);
+        swapSlots.splice(swapSlots.indexOf(best.slot), 1);
+      }
       applyPosMins(pos2, HALF);
 
       if (gkId) mins[gkId] += FULL;
