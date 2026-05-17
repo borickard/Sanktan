@@ -282,6 +282,9 @@ export default function App() {
   const timerRef        = useRef(null);
   const switchSounded   = useRef(false);
   const endSounded      = useRef(false);
+  const startedAtRef    = useRef(null); // wall-clock timestamp at last resume
+  const baseElapsedRef  = useRef(0);    // elapsed seconds at last resume
+  const wakeLockRef     = useRef(null);
   const dragIdx         = useRef(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
   const timerSentinelRef = useRef(null);
@@ -404,13 +407,64 @@ export default function App() {
     }
   }, [timerElapsed, timerRunning, settings]);
 
+  /* Timestamp-based timer: survives screen lock / background tab throttling.
+     Anchors (startedAt, baseElapsed) at every resume and seek, then the tick
+     computes elapsed from wall-clock delta. visibilitychange triggers an
+     immediate catch-up so the UI snaps to the right time on unlock. */
   useEffect(() => {
-    clearInterval(timerRef.current);
-    if (timerRunning) {
-      timerRef.current = setInterval(() => setTimerElapsed(e => e + 1), 1000);
+    if (!timerRunning) {
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {});
+        wakeLockRef.current = null;
+      }
+      return;
     }
-    return () => clearInterval(timerRef.current);
+    startedAtRef.current = Date.now();
+    baseElapsedRef.current = timerElapsed;
+    const tick = () => {
+      if (startedAtRef.current == null) return;
+      setTimerElapsed(baseElapsedRef.current + Math.floor((Date.now() - startedAtRef.current) / 1000));
+    };
+    timerRef.current = setInterval(tick, 1000);
+    (async () => {
+      if ("wakeLock" in navigator) {
+        try { wakeLockRef.current = await navigator.wakeLock.request("screen"); } catch {}
+      }
+    })();
+    return () => {
+      clearInterval(timerRef.current);
+      startedAtRef.current = null;
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {});
+        wakeLockRef.current = null;
+      }
+    };
+  }, [timerRunning]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!timerRunning) return;
+    const onVis = async () => {
+      if (document.hidden) return;
+      if (startedAtRef.current != null) {
+        setTimerElapsed(baseElapsedRef.current + Math.floor((Date.now() - startedAtRef.current) / 1000));
+      }
+      if ("wakeLock" in navigator && !wakeLockRef.current) {
+        try { wakeLockRef.current = await navigator.wakeLock.request("screen"); } catch {}
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, [timerRunning]);
+
+  /* Seek the running timer without losing wall-clock anchor. */
+  const seekTimer = next => {
+    const v = Math.max(0, Math.round(next));
+    setTimerElapsed(v);
+    if (timerRunning) {
+      startedAtRef.current = Date.now();
+      baseElapsedRef.current = v;
+    }
+  };
 
   const fmt       = FM[settings.format] ?? FM["5v5"];
   const isDesktop = winW >= 700;
@@ -1075,9 +1129,9 @@ export default function App() {
               const timeColor   = isOvertime ? "#f87171" : isSwitchDue ? "#fb923c" : "#e2e8f0";
               const clampedPeriod = Math.min(timerPeriod, plan.length - 1);
 
-              const goPrev = () => { setTimerPeriod(p => Math.max(0, p - 1)); setTimerElapsed(0); };
-              const goNext = () => { setTimerPeriod(p => Math.min(plan.length - 1, p + 1)); setTimerElapsed(0); setTimerRunning(true); };
-              const reset  = () => { setTimerElapsed(0); setTimerRunning(false); };
+              const goPrev = () => { setTimerPeriod(p => Math.max(0, p - 1)); seekTimer(0); };
+              const goNext = () => { setTimerPeriod(p => Math.min(plan.length - 1, p + 1)); seekTimer(0); setTimerRunning(true); };
+              const reset  = () => { setTimerRunning(false); setTimerElapsed(0); };
 
               return (
                 <>
@@ -1100,7 +1154,7 @@ export default function App() {
                           </button>
                         </div>
                         <div
-                          onClick={e => { const r = e.currentTarget.getBoundingClientRect(); const dx = e.clientX - r.left; setTimerElapsed(Math.round(dx / r.width * periodSecs)); }}
+                          onClick={e => { const r = e.currentTarget.getBoundingClientRect(); const dx = e.clientX - r.left; seekTimer(dx / r.width * periodSecs); }}
                           style={{ height: 6, background: "#0f172a", borderRadius: 3, cursor: "pointer", overflow: "hidden" }}>
                           <div style={{ width: `${barPct}%`, height: "100%", background: barColor, borderRadius: 3, transition: "width 0.8s linear" }} />
                         </div>
@@ -1152,7 +1206,7 @@ export default function App() {
                       const rect = e.currentTarget.getBoundingClientRect();
                       const dx = e.clientX - rect.left;
                       const pct = dx / rect.width;
-                      setTimerElapsed(Math.round(Math.max(0, pct) * periodSecs));
+                      seekTimer(Math.max(0, pct) * periodSecs);
                     }}
                     style={{ background: "#0f172a", borderRadius: 6, height: 10, marginBottom: 4, position: "relative", overflow: "hidden", cursor: "pointer" }}>
                     {settings.subs >= 1 && (
@@ -1196,13 +1250,13 @@ export default function App() {
                       style={{ ...S.btn("secondary"), padding: "9px 11px" }}>
                       <RotateCcw size={15} />
                     </button>
-                    <button onClick={() => setTimerElapsed(e => Math.max(0, e - 15))}
+                    <button onClick={() => seekTimer(timerElapsed - 15)}
                       style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 12, fontWeight: 700 }}>−15s</button>
                     <button onClick={() => setTimerRunning(r => !r)}
                       style={{ ...S.btn("primary"), flex: 2, padding: "9px 0", fontSize: 14 }}>
                       {timerRunning ? <><Pause size={14} /> Pausa</> : <><Play size={14} /> {timerElapsed > 0 ? "Fortsätt" : "Starta"}</>}
                     </button>
-                    <button onClick={() => setTimerElapsed(e => e + 15)}
+                    <button onClick={() => seekTimer(timerElapsed + 15)}
                       style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 12, fontWeight: 700 }}>+15s</button>
                     <button onClick={goPrev} disabled={timerPeriod === 0}
                       style={{ ...S.btn("secondary"), padding: "9px 11px", opacity: timerPeriod === 0 ? 0.35 : 1 }}>
