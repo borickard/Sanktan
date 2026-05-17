@@ -8,6 +8,10 @@
       *, *::before, *::after { box-sizing: border-box; }
       body { margin: 0; overflow-x: hidden; }
       input, button { min-width: 0; font-family: inherit; }
+      /* Prevent iOS Safari from auto-zooming on focus when input font-size < 16px */
+      @media (max-width: 768px) {
+        input, select, textarea { font-size: 16px !important; }
+      }
     </style>
   </head>
   <body>

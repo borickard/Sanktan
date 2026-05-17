@@ -12,8 +12,8 @@ const uid = () => ++_uid;
 
 /* ─── Constants ─── */
 const PREFS = [
-  { key: "attack",  label: "Anfall",   Icon: Zap,     color: "#f97316" },
   { key: "neutral", label: "Mix",      Icon: Shuffle, color: "#94a3b8" },
+  { key: "attack",  label: "Anfall",   Icon: Zap,     color: "#f97316" },
   { key: "defense", label: "Defensiv", Icon: Shield,  color: "#60a5fa" },
 ];
 const PM = Object.fromEntries(PREFS.map(p => [p.key, p]));
@@ -30,15 +30,9 @@ const FM = Object.fromEntries(FORMATS.map(f => [f.key, f]));
 const mkP = (name, isGK = false, pref = "neutral") => ({ id: uid(), name, isGK, pref, enabled: true });
 
 const DEMO = [
-  mkP("Spelare 1", true,  "neutral"),
-  mkP("Spelare 2", false, "attack"),
-  mkP("Spelare 3", false, "defense"),
-  mkP("Spelare 4", false, "attack"),
-  mkP("Spelare 5", false, "neutral"),
-  mkP("Spelare 6", false, "defense"),
-  mkP("Spelare 7", false, "attack"),
-  mkP("Spelare 8", false, "neutral"),
-  mkP("Spelare 9", false, "defense"),
+  mkP("", true),
+  mkP(""), mkP(""), mkP(""), mkP(""),
+  mkP(""), mkP(""), mkP(""), mkP(""),
 ];
 
 /* ─── URL encoding ─── */
