@@ -9,6 +9,11 @@ import {
 /* ─── ID factory ─── */
 let _uid = 100;
 const uid = () => ++_uid;
+const bumpUid = (players) => {
+  if (!players) return;
+  const max = Math.max(0, ...players.map(p => p?.id ?? 0));
+  if (max >= _uid) _uid = max;
+};
 
 /* ─── Constants ─── */
 const PREFS = [
@@ -80,6 +85,7 @@ const initFromURL = (() => {
   } catch {}
   return null;
 })();
+bumpUid(initFromURL?.players);
 
 /* ─── Auto-generate algorithm ─── */
 function generatePlan(players, settings) {
@@ -407,6 +413,7 @@ export default function App() {
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(({ state }) => {
         const unpacked = unpackURL(JSON.parse(_dec(state)));
+        bumpUid(unpacked.players);
         setPlayers(unpacked.players);
         setSettings(s => ({ ...s, ...unpacked.settings }));
         setHomeTeam(unpacked.homeTeam);
@@ -595,7 +602,10 @@ export default function App() {
   const addPlayer = () => {
     const n = newName.trim();
     if (!n) return;
-    setPlayers(ps => [...ps, mkP(n)]);
+    setPlayers(ps => {
+      bumpUid(ps);
+      return [...ps, mkP(n)];
+    });
     setNewName("");
   };
 
