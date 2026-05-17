@@ -1308,6 +1308,11 @@ export default function App() {
                           </span>
                           {isSwitchDue && !isOvertime && <ArrowUpDown size={15} color="#fb923c" style={{ flexShrink: 0 }} />}
                           {isOvertime && <AlertTriangle size={15} color="#f87171" style={{ flexShrink: 0 }} />}
+                          <button onClick={() => { setTab("players"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                            title="Gå till Spelare-vyn"
+                            style={{ ...S.btn("secondary"), padding: "7px 10px", flexShrink: 0 }}>
+                            <Users size={14} />
+                          </button>
                           <button onClick={() => setTimerRunning(r => !r)}
                             style={{ ...S.btn("primary"), padding: "7px 12px", flexShrink: 0 }}>
                             {timerRunning ? <Pause size={14} /> : <Play size={14} />}
