@@ -3,7 +3,7 @@ import {
   Zap, Shuffle, Shield, Layers,
   Play, Pause, RotateCcw, RefreshCw, SkipBack, SkipForward,
   ArrowUpDown, AlertTriangle, Link2, X, Check,
-  Users, ClipboardList, Pencil, ChevronRight, GripVertical,
+  Users, ClipboardList, Pencil, ChevronRight, ChevronUp, ChevronDown,
 } from "lucide-react";
 
 /* ─── ID factory ─── */
@@ -429,6 +429,15 @@ export default function App() {
 
   const delP = id => setPlayers(ps => ps.filter(p => p.id !== id));
 
+  const movePlayer = (id, dir) => setPlayers(ps => {
+    const i = ps.findIndex(p => p.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= ps.length) return ps;
+    const next = [...ps];
+    [next[i], next[j]] = [next[j], next[i]];
+    return next;
+  });
+
   const activePlayers = players.filter(p => p.enabled !== false);
 
   const doGenerate = () => {
@@ -801,7 +810,32 @@ export default function App() {
                   outline: dragOverIdx === i ? "2px solid #4ade80" : "none",
                   outlineOffset: 2, cursor: "grab",
                 }}>
-                <GripVertical size={16} color="#64748b" style={{ flexShrink: 0, cursor: "grab" }} />
+                <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                  <button
+                    onClick={() => movePlayer(p.id, -1)}
+                    disabled={i === 0}
+                    title="Flytta upp"
+                    aria-label="Flytta upp"
+                    style={{
+                      background: "transparent", border: "none", padding: "4px 2px",
+                      color: i === 0 ? "#334155" : "#64748b",
+                      cursor: i === 0 ? "default" : "pointer", lineHeight: 0,
+                    }}>
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    onClick={() => movePlayer(p.id, 1)}
+                    disabled={i === players.length - 1}
+                    title="Flytta ner"
+                    aria-label="Flytta ner"
+                    style={{
+                      background: "transparent", border: "none", padding: "4px 2px",
+                      color: i === players.length - 1 ? "#334155" : "#64748b",
+                      cursor: i === players.length - 1 ? "default" : "pointer", lineHeight: 0,
+                    }}>
+                    <ChevronDown size={14} />
+                  </button>
+                </div>
                 <button
                   onClick={() => updP(p.id, "enabled", p.enabled === false)}
                   title={p.enabled !== false ? "Avaktivera (ej med idag)" : "Aktivera"}
