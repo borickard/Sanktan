@@ -12,10 +12,11 @@ const uid = () => ++_uid;
 
 /* ─── Constants ─── */
 const PREFS = [
-  { key: "neutral", label: "Mix",      Icon: Shuffle, color: "#94a3b8" },
-  { key: "attack",  label: "Anfall",   Icon: Zap,     color: "#f97316" },
-  { key: "defense", label: "Defensiv", Icon: Shield,  color: "#60a5fa" },
+  { key: "neutral", label: "Mix",      Icon: Shuffle, color: "#f97316" },
+  { key: "attack",  label: "Anfall",   Icon: Zap,     color: "#ef4444" },
+  { key: "defense", label: "Defensiv", Icon: Shield,  color: "#facc15" },
 ];
+const GK_COLOR = "#22c55e";
 const PM = Object.fromEntries(PREFS.map(p => [p.key, p]));
 
 const FORMATS = [
@@ -819,7 +820,7 @@ export default function App() {
           maxWidth: "100%", overflow: "hidden",
           background: isSelected ? "#fef08a" : "#0f172a",
           color: isSelected ? "#0f172a" : "#e2e8f0",
-          border: `2px solid ${isSelected ? "#fbbf24" : activeGK ? "#fbbf24" : "#334155"}`,
+          border: `2px solid ${isSelected ? "#fbbf24" : activeGK ? GK_COLOR : "#334155"}`,
           borderRadius: 8,
           padding: small ? "3px 7px" : "4px 8px",
           fontSize: small ? 12 : 13,
@@ -832,7 +833,7 @@ export default function App() {
         }}
       >
         {activeGK && (
-          <span style={{ fontSize: 11, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
+          <span style={{ fontSize: 11, background: GK_COLOR, color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
         )}
         {p.isGK && !inGKSlot && (
           <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>mv</span>
@@ -853,8 +854,8 @@ export default function App() {
         {showPositions ? (
           <>
             <div style={{ marginBottom: 4 }}>
-              <div style={{ fontSize: 11, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Zap size={11} /> Anfallszon</div>
-              <div style={{ display: "flex", justifyContent: "center", gap: 8, alignItems: "flex-start" }}>
+              <div style={{ fontSize: 11, color: "#ef4444", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Zap size={11} /> Anfallszon</div>
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
                 {att.map((id, j) => <PositionSlot key={j} starterId={id} subId={subAtt?.[j]} label={`Anfall ${j + 1}`} periodIdx={periodIdx} subsAreLive={subsAreLive} />)}
               </div>
             </div>
@@ -864,17 +865,17 @@ export default function App() {
             </div>
             {fmt.mid > 0 && (
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Layers size={11} /> Mittfält</div>
-                <div style={{ display: "flex", justifyContent: "center", gap: 8, alignItems: "flex-start" }}>
+                <div style={{ fontSize: 11, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Layers size={11} /> Mittfält</div>
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
                   {(mid ?? []).map((id, j) => <PositionSlot key={j} starterId={id} subId={subMid?.[j]} label={`Mitt ${j + 1}`} periodIdx={periodIdx} subsAreLive={subsAreLive} />)}
                 </div>
               </div>
             )}
             <div style={{ marginBottom: 4 }}>
-              <div style={{ display: "flex", justifyContent: "center", gap: 8, alignItems: "flex-start" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
                 {def.map((id, j) => <PositionSlot key={j} starterId={id} subId={subDef?.[j]} label={`Försvar ${j + 1}`} periodIdx={periodIdx} subsAreLive={subsAreLive} />)}
               </div>
-              <div style={{ fontSize: 11, color: "#60a5fa", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={11} /> Försvarszon</div>
+              <div style={{ fontSize: 11, color: "#facc15", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={11} /> Försvarszon</div>
             </div>
           </>
         ) : (
@@ -910,7 +911,7 @@ export default function App() {
     const showSub = sub && sub.enabled !== false;
     const isGKLabel = label === "Målvakt";
     return (
-      <div style={{ textAlign: "center", flex: "1 1 0", minWidth: 0, maxWidth: 120 }}>
+      <div style={{ textAlign: "center", flex: "1 1 80px", minWidth: 75, maxWidth: 110, overflow: "hidden" }}>
         {label && (
           <div style={{ fontSize: 11, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5, fontWeight: 600 }}>
             {label}
@@ -1162,8 +1163,8 @@ export default function App() {
                     </div>
                   ))}
                   <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ fontSize: 11, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
-                    <span style={{ fontSize: 12, color: "#fbbf24" }}>Målvakt</span>
+                    <span style={{ fontSize: 11, background: GK_COLOR, color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
+                    <span style={{ fontSize: 12, color: GK_COLOR }}>Målvakt</span>
                   </div>
                 </div>
               </div>
@@ -1593,15 +1594,15 @@ export default function App() {
                   const m = mins[p.id] ?? 0;
                   const pct = totalPossible > 0 ? (m / totalPossible) * 100 : 0;
                   const pref = PM[p.pref];
-                  const barColor = p.isGK ? "#fbbf24" : pref.color;
+                  const barColor = p.isGK ? GK_COLOR : pref.color;
                   const textColor = pct >= 75 ? "#4ade80" : pct >= 45 ? "#fbbf24" : "#f87171";
 
                   const ps = posStats[p.id] ?? {};
                   const posBadges = [
-                    ps.gk    > 0 && { key: "gk",    label: "MV",   Icon: null,    count: ps.gk,    bg: "#fbbf2426", color: "#fbbf24" },
-                    ps.att   > 0 && { key: "att",   label: null,   Icon: Zap,     count: ps.att,   bg: "#f9731626", color: "#f97316" },
-                    ps.mid   > 0 && { key: "mid",   label: null,   Icon: Shuffle, count: ps.mid,   bg: "#94a3b826", color: "#94a3b8" },
-                    ps.def   > 0 && { key: "def",   label: null,   Icon: Shield,  count: ps.def,   bg: "#60a5fa26", color: "#60a5fa" },
+                    ps.gk    > 0 && { key: "gk",    label: "MV",   Icon: null,    count: ps.gk,    bg: "#22c55e26", color: GK_COLOR },
+                    ps.att   > 0 && { key: "att",   label: null,   Icon: Zap,     count: ps.att,   bg: "#ef444426", color: "#ef4444" },
+                    ps.mid   > 0 && { key: "mid",   label: null,   Icon: Shuffle, count: ps.mid,   bg: "#f9731626", color: "#f97316" },
+                    ps.def   > 0 && { key: "def",   label: null,   Icon: Shield,  count: ps.def,   bg: "#facc1526", color: "#facc15" },
                     ps.bench > 0 && { key: "bench", label: "Bänk", Icon: null,    count: ps.bench, bg: "#1e293b",   color: "#64748b" },
                   ].filter(Boolean);
 
@@ -1611,7 +1612,7 @@ export default function App() {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           {p.isGK
-                            ? <span style={{ fontSize: 11, background: "#fbbf24", color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
+                            ? <span style={{ fontSize: 11, background: GK_COLOR, color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
                             : showPositions && <pref.Icon size={12} color={pref.color} />
                           }
                           <span style={{ fontSize: 13, color: "#cbd5e1" }}>{displayName(p)}</span>
@@ -1636,10 +1637,10 @@ export default function App() {
                       <div style={{ background: "#0f172a", borderRadius: 5, height: 8, overflow: "hidden", display: "flex" }}>
                         {showPositions ? (
                           [
-                            { count: ps.gk,    color: "#fbbf24" },
-                            { count: ps.att,   color: "#f97316" },
-                            { count: ps.mid,   color: "#94a3b8" },
-                            { count: ps.def,   color: "#60a5fa" },
+                            { count: ps.gk,    color: GK_COLOR },
+                            { count: ps.att,   color: "#ef4444" },
+                            { count: ps.mid,   color: "#f97316" },
+                            { count: ps.def,   color: "#facc15" },
                             { count: ps.bench, color: "#1e3a5f" },
                           ].map(({ count, color }, si) => {
                             const total = (ps.gk ?? 0) + (ps.att ?? 0) + (ps.mid ?? 0) + (ps.def ?? 0) + (ps.bench ?? 0);
