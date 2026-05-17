@@ -880,10 +880,10 @@ export default function App() {
               </div>
             )}
             <div style={{ marginBottom: 4 }}>
+              <div style={{ fontSize: 11, color: "#facc15", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={11} /> Försvarszon</div>
               <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
                 {def.map((id, j) => <PositionSlot key={j} starterId={id} subId={subDef?.[j]} label={`Försvar ${j + 1}`} periodIdx={periodIdx} subsAreLive={subsAreLive} />)}
               </div>
-              <div style={{ fontSize: 11, color: "#facc15", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginTop: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={11} /> Försvarszon</div>
             </div>
           </>
         ) : (
