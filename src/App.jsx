@@ -119,10 +119,19 @@ function generatePlan(players, settings) {
      bonus (FULL/2) AND a single-period posMins imbalance (≈FULL/2). After a
      couple of periods, posMins differences grow past FULL and dominate again. */
   const RANDOM_SCALE = FULL;
+  /* Continuing a role from the previous segment is worth ~one full period of
+     posMins imbalance, so a player who plays consecutive segments tends to
+     stay in the same role (no role-shuffle when nothing meaningful changes). */
+  const STAY_BONUS = FULL;
+  /* Pauses between periods can be short. Bias against starting the new
+     period with the same outfield players that finished the previous one. */
+  const REST_PENALTY = FULL;
 
   /* halfIdx is a tag for the tiebreaker so first/second halves of the same
-     period don't get identical noise. */
-  const fillPositions = (pool, periodIdx, halfIdx) => {
+     period don't get identical noise. prevPosByPlayer carries each player's
+     role from the previous segment of this period so they can be encouraged
+     to stay put. */
+  const fillPositions = (pool, periodIdx, halfIdx, prevPosByPlayer) => {
     const limits = { att: fmt.att, mid: fmt.mid, def: fmt.def };
     const counts = { att: 0, mid: 0, def: 0 };
     const remaining = [...pool];
@@ -131,6 +140,7 @@ function generatePlan(players, settings) {
     const score = (player, role) => {
       let s = -(posMins[player.id]?.[role] ?? 0);
       if (prefRole[player.pref] === role) s += PREF_BONUS;
+      if (prevPosByPlayer?.[player.id] === role) s += STAY_BONUS;
       s += hash01(`${player.id}|${role}|${periodIdx}|${halfIdx}|${shuffleSalt}`) * RANDOM_SCALE;
       return s;
     };
@@ -165,6 +175,16 @@ function generatePlan(players, settings) {
     pos.df.forEach(id => { if (id) posMins[id].def += minsToAdd; });
   };
 
+  /* Number of lineup segments per period = subs + 1. Each segment runs
+     for FULL/segCount minutes. segCount = 1 means no halftime swap. */
+  const segCount = Math.max(1, (subs ?? 0) + 1);
+  const segMin = FULL / segCount;
+
+  /* Carries the outfield player IDs from the last segment of the previous
+     period so the next period's first segment can avoid restarting with the
+     same kids (short between-period pauses). */
+  let lastSegmentIds = new Set();
+
   return Array.from({ length: periods }, (_, i) => {
     let gkId = null;
     if (fmt.hasGK) {
@@ -176,142 +196,62 @@ function generatePlan(players, settings) {
     const avail = players
       .filter(p => p.id !== gkId)
       .sort((a, b) => {
-        /* Cumulative minutes drives the lineup choice. Hash on (player, period,
-           salt) breaks ties and lets Slumpa rotate who sits out when minutes
-           are close. Scale is small (PREF_BONUS) so big mins gaps still win. */
         const ja = mins[a.id] + hash01(`avail|${a.id}|${i}|${shuffleSalt}`) * PREF_BONUS;
         const jb = mins[b.id] + hash01(`avail|${b.id}|${i}|${shuffleSalt}`) * PREF_BONUS;
         return ja - jb;
       });
 
-    if (subs >= 1) {
-      const HALF = FULL / 2;
-      const numSubs = Math.max(0, avail.length - fieldCount);
+    if (gkId) mins[gkId] += FULL;
 
-      /* ── Not enough players for any sub: fall through to no-sub logic ── */
-      if (numSubs === 0) {
-        const starters = avail.slice(0, fieldCount);
-        const pos = fillPositions(starters, i, 0);
-        applyPosMins(pos, FULL);
-        if (gkId) mins[gkId] += FULL;
-        starters.forEach(p => { mins[p.id] += FULL; });
-        return {
-          gk: gkId,
-          att: pos.at, mid: pos.md, def: pos.df,
-          att2: null, mid2: null, def2: null,
-          bench: avail.slice(fieldCount).map(p => p.id),
-        };
-      }
+    /* For each segment, pick fieldCount players using a multi-key sort:
+         1. fewest segments played this period (forces rotation),
+         2. fewest cumulative minutes overall (cross-period fairness),
+         3. small random + previous-period rest penalty for segment 0. */
+    const segmentsPlayedThisPeriod = {};
+    const lineups = [];
+    let prevPosByPlayer = {};
 
-      /* ── Full rotation: enough players for everyone to play one half ── */
-      if (avail.length >= fieldCount * 2) {
-        const selected = avail.slice(0, fieldCount * 2);
-        const bench    = avail.slice(fieldCount * 2);
-        /* Spread attackers/defenders evenly across both halves */
-        const h1 = [], h2 = [];
-        const groups = ["attack", "defense", "neutral"].map(pr =>
-          pr === "neutral"
-            ? selected.filter(p => p.pref !== "attack" && p.pref !== "defense")
-            : selected.filter(p => p.pref === pr)
-        );
-        for (const group of groups) {
-          group.forEach((p, i) => {
-            if (h1.length < fieldCount && (i % 2 === 0 || h2.length >= fieldCount)) h1.push(p);
-            else if (h2.length < fieldCount) h2.push(p);
-            else h1.push(p);
-          });
-        }
-        const pos1 = fillPositions(h1, i, 0);
-        applyPosMins(pos1, HALF);
-        const pos2 = fillPositions(h2, i, 1);
-        applyPosMins(pos2, HALF);
-        if (gkId) mins[gkId] += FULL;
-        h1.forEach(p => { mins[p.id] += HALF; });
-        h2.forEach(p => { mins[p.id] += HALF; });
-        return {
-          gk: gkId,
-          att: pos1.at, mid: pos1.md, def: pos1.df,
-          att2: pos2.at, mid2: pos2.md, def2: pos2.df,
-          bench: bench.map(p => p.id),
-        };
-      }
-
-      /* ── Partial rotation: numSubs players swap at halftime ──
-         avail is sorted ascending by minutes, so:
-         - avail[0..fieldCount-numSubs-1]: fewest mins → stay the full period
-         - avail[fieldCount-numSubs..fieldCount-1]: more mins → play first half, then rest
-         - avail[fieldCount..]:              most mins → rest first half, play second half
-         This naturally self-balances across periods: full-period players accumulate
-         more mins and drop in priority next period, letting bench players catch up. */
-      const numStay    = fieldCount - numSubs;
-      const firstHalf  = avail.slice(0, fieldCount);
-      const benchPool  = avail.slice(fieldCount);          // come on at halftime
-      const stayers    = firstHalf.slice(0, numStay);      // play full period
-      const comingOff  = firstHalf.slice(numStay);         // play first half only
-      const secondHalf = [...stayers, ...benchPool];
-
-      const pos1 = fillPositions(firstHalf, i, 0);
-      applyPosMins(pos1, HALF);
-
-      /* Lock stayers to the same role in both halves so the only "subs" the UI
-         shows are real player swaps, not a stayer rotating positions across
-         halves. Replace each comingOff slot with the best-fit benchPool player. */
-      const pos2 = { at: [...pos1.at], md: [...pos1.md], df: [...pos1.df] };
-      const comingOffIds = new Set(comingOff.map(p => p.id));
-      const swapSlots = [];
-      for (const role of ["at", "md", "df"]) {
-        pos2[role].forEach((id, j) => {
-          if (id && comingOffIds.has(id)) swapSlots.push({ role, j });
-        });
-      }
-      const roleKey = { at: "att", md: "mid", df: "def" };
-      const remainingBench = [...benchPool];
-      while (remainingBench.length > 0 && swapSlots.length > 0) {
-        let best = null;
-        for (const player of remainingBench) {
-          for (const slot of swapSlots) {
-            const r = roleKey[slot.role];
-            let s = -(posMins[player.id]?.[r] ?? 0);
-            if (prefRole[player.pref] === r) s += PREF_BONUS;
-            s += hash01(`${player.id}|${r}|${i}|1|${shuffleSalt}`) * RANDOM_SCALE;
-            if (best === null || s > best.score) best = { player, slot, score: s };
-          }
-        }
-        if (!best) break;
-        pos2[best.slot.role][best.slot.j] = best.player.id;
-        remainingBench.splice(remainingBench.indexOf(best.player), 1);
-        swapSlots.splice(swapSlots.indexOf(best.slot), 1);
-      }
-      applyPosMins(pos2, HALF);
-
-      if (gkId) mins[gkId] += FULL;
-      stayers.forEach(p   => { mins[p.id] += FULL; });
-      comingOff.forEach(p => { mins[p.id] += HALF; });
-      benchPool.forEach(p => { mins[p.id] += HALF; });
-
-      return {
-        gk: gkId,
-        att: pos1.at, mid: pos1.md, def: pos1.df,
-        att2: pos2.at, mid2: pos2.md, def2: pos2.df,
-        bench: [],
+    for (let k = 0; k < segCount; k++) {
+      const sortKey = p => {
+        const segs = segmentsPlayedThisPeriod[p.id] ?? 0;
+        let secondary = mins[p.id];
+        if (k === 0 && lastSegmentIds.has(p.id)) secondary += REST_PENALTY;
+        secondary += hash01(`seg|${p.id}|${i}|${k}|${shuffleSalt}`) * PREF_BONUS;
+        return [segs, secondary];
       };
-    } else {
-      /* No subs: single formation, full time */
-      const starters = avail.slice(0, fieldCount);
-      const pos = fillPositions(starters, i, 0);
-      applyPosMins(pos, FULL);
+      const sorted = avail.slice().sort((a, b) => {
+        const [sa1, sa2] = sortKey(a);
+        const [sb1, sb2] = sortKey(b);
+        return sa1 - sb1 || sa2 - sb2;
+      });
+      const segPlayers = sorted.slice(0, Math.min(fieldCount, avail.length));
 
-      if (gkId) mins[gkId] += FULL;
-      starters.forEach(p => { mins[p.id] += FULL; });
+      segPlayers.forEach(p => {
+        segmentsPlayedThisPeriod[p.id] = (segmentsPlayedThisPeriod[p.id] ?? 0) + 1;
+        mins[p.id] += segMin;
+      });
 
-      const usedIds = new Set([gkId, ...starters.map(p => p.id)].filter(Boolean));
-      return {
-        gk: gkId,
-        att: pos.at, mid: pos.md, def: pos.df,
-        att2: null, mid2: null, def2: null,
-        bench: players.filter(p => !usedIds.has(p.id)).map(p => p.id),
-      };
+      const pos = fillPositions(segPlayers, i, k, prevPosByPlayer);
+      applyPosMins(pos, segMin);
+
+      lineups.push({ att: pos.at, mid: pos.md, def: pos.df });
+
+      /* Build prev-pos map for next segment from this segment's assignment. */
+      const nextPrev = {};
+      pos.at.forEach(id => { if (id) nextPrev[id] = "att"; });
+      pos.md.forEach(id => { if (id) nextPrev[id] = "mid"; });
+      pos.df.forEach(id => { if (id) nextPrev[id] = "def"; });
+      prevPosByPlayer = nextPrev;
     }
+
+    /* Players who never appeared in any segment this period. */
+    const bench = avail.filter(p => !(segmentsPlayedThisPeriod[p.id] > 0)).map(p => p.id);
+
+    /* Snapshot last-segment outfield IDs for the next period's rest bias. */
+    const last = lineups[lineups.length - 1];
+    lastSegmentIds = new Set([...last.att, ...last.mid, ...last.def].filter(Boolean));
+
+    return { gk: gkId, lineups, bench };
   });
 }
 
@@ -378,7 +318,6 @@ export default function App() {
   const [timerElapsed, setTimerElapsed] = useState(restoredTimer?.elapsed ?? 0); // seconds
   const [timerPeriod,  setTimerPeriod]  = useState(restoredTimer?.period ?? 0); // 0-indexed
   const timerRef        = useRef(null);
-  const switchSounded   = useRef(false);
   const endSounded      = useRef(false);
   const startedAtRef    = useRef(null); // wall-clock timestamp at last resume
   const baseElapsedRef  = useRef(0);    // elapsed seconds at last resume
@@ -483,31 +422,40 @@ export default function App() {
     return () => window.removeEventListener("scroll", h);
   }, [tab, plan]);
 
+  /* Tracks which segment-boundary beeps have already fired this period.
+     Segment 0 is the period start (no beep) so we initialize to 0. */
+  const lastSegmentBeeped = useRef(0);
+
   /* Reset sound flags when moving to a new period or resetting the timer */
   useEffect(() => {
-    switchSounded.current = false;
+    lastSegmentBeeped.current = 0;
     endSounded.current    = false;
   }, [timerPeriod]);
 
-  /* Trigger sounds when the timer crosses a threshold while running.
+  /* Trigger sounds when the timer crosses a segment boundary while running.
      On the first run after a page refresh, sync the "already played" flags
-     to the restored elapsed instead of replaying the beep for a threshold
-     that was crossed before the refresh. */
+     to the restored elapsed instead of replaying beeps for segment
+     boundaries that were crossed before the refresh. */
   const firstSoundCheck = useRef(true);
   useEffect(() => {
     if (!timerRunning) return;
     const pSecs = settings.duration * 60;
-    const hSecs = pSecs / 2;
+    const segCount = (settings.subs ?? 0) + 1;
+    const segSecs = pSecs / segCount;
+    /* Current segment index, capped at the last segment. */
+    const currentSeg = Math.min(segCount - 1, Math.max(0, Math.floor(timerElapsed / segSecs)));
     if (firstSoundCheck.current) {
       firstSoundCheck.current = false;
-      switchSounded.current = timerElapsed >= hSecs;
-      endSounded.current    = timerElapsed >= pSecs;
+      lastSegmentBeeped.current = currentSeg;
+      endSounded.current = timerElapsed >= pSecs;
       return;
     }
-    if (timerElapsed < hSecs) switchSounded.current = false;
-    if (timerElapsed < pSecs) endSounded.current    = false;
-    if (settings.subs >= 1 && timerElapsed >= hSecs && timerElapsed < pSecs && !switchSounded.current) {
-      switchSounded.current = true;
+    /* Scrubbing backwards rearms beeps for boundaries that haven't been crossed. */
+    if (currentSeg < lastSegmentBeeped.current) lastSegmentBeeped.current = currentSeg;
+    if (timerElapsed < pSecs) endSounded.current = false;
+    /* New boundary crossed (segCount-1 boundaries exist between segCount segments). */
+    if (currentSeg > lastSegmentBeeped.current && currentSeg < segCount && timerElapsed < pSecs) {
+      lastSegmentBeeped.current = currentSeg;
       playSwitchSound();
     }
     if (timerElapsed >= pSecs && !endSounded.current) {
@@ -758,12 +706,11 @@ export default function App() {
       if (i !== sel.periodIdx) return period;
       return {
         gk:    sw(period.gk),
-        att:   period.att.map(sw),
-        mid:   (period.mid ?? []).map(sw),
-        def:   period.def.map(sw),
-        att2:  (period.att2 ?? []).map(sw),
-        mid2:  (period.mid2 ?? []).map(sw),
-        def2:  (period.def2 ?? []).map(sw),
+        lineups: period.lineups.map(l => ({
+          att: l.att.map(sw),
+          mid: (l.mid ?? []).map(sw),
+          def: l.def.map(sw),
+        })),
         bench: period.bench.map(sw),
       };
     }));
@@ -774,19 +721,14 @@ export default function App() {
   const calcMins = () => {
     if (!plan) return {};
     const FULL = settings.duration;
-    const HALF = FULL / 2;
     const m = Object.fromEntries(players.map(p => [p.id, 0]));
-    plan.forEach(({ gk, att, mid, def, att2, mid2, def2 }) => {
+    plan.forEach(({ gk, lineups }) => {
       if (gk) m[gk] = (m[gk] ?? 0) + FULL;
-      if (att2 != null) {
-        /* Two-half rotation: each half gets FULL/2 */
-        [...att, ...(mid ?? []), ...def].forEach(id => { if (id) m[id] = (m[id] ?? 0) + HALF; });
-        [...(att2 ?? []), ...(mid2 ?? []), ...(def2 ?? [])].forEach(id => { if (id) m[id] = (m[id] ?? 0) + HALF; });
-      } else {
-        att.forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
-        (mid ?? []).forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
-        def.forEach(id => { if (id) m[id] = (m[id] ?? 0) + FULL; });
-      }
+      if (!lineups || lineups.length === 0) return;
+      const segMin = FULL / lineups.length;
+      lineups.forEach(({ att, mid, def }) => {
+        [...att, ...(mid ?? []), ...def].forEach(id => { if (id) m[id] = (m[id] ?? 0) + segMin; });
+      });
     });
     return m;
   };
@@ -796,11 +738,13 @@ export default function App() {
     const stats = Object.fromEntries(
       activePlayers.map(p => [p.id, { gk: 0, att: 0, mid: 0, def: 0, bench: 0 }])
     );
-    plan.forEach(({ gk, att, mid, def, att2, mid2, def2, bench }) => {
+    plan.forEach(({ gk, lineups, bench }) => {
       if (gk && stats[gk]) stats[gk].gk++;
-      [...att, ...(att2 ?? [])].forEach(id => { if (id && stats[id]) stats[id].att++; });
-      [...(mid ?? []), ...(mid2 ?? [])].forEach(id => { if (id && stats[id]) stats[id].mid++; });
-      [...def, ...(def2 ?? [])].forEach(id => { if (id && stats[id]) stats[id].def++; });
+      (lineups ?? []).forEach(({ att, mid, def }) => {
+        att.forEach(id => { if (id && stats[id]) stats[id].att++; });
+        (mid ?? []).forEach(id => { if (id && stats[id]) stats[id].mid++; });
+        def.forEach(id => { if (id && stats[id]) stats[id].def++; });
+      });
       bench.forEach(id => { if (id && stats[id]) stats[id].bench++; });
     });
     return stats;
@@ -851,8 +795,15 @@ export default function App() {
     );
   };
 
-  const Pitch = ({ att, mid, def, subAtt, subMid, subDef, gk, periodIdx, subsAreLive }) => {
+  const Pitch = ({ lineups, gk, periodIdx, activeSegmentIdx }) => {
     const showPositions = settings.positions !== false;
+    /* Build per-slot id arrays across all segments so PositionSlot can collapse
+       adjacent duplicates and dim everyone except the active segment. */
+    const segCount = lineups.length;
+    const att = lineups[0].att;
+    const mid = lineups[0].mid ?? [];
+    const def = lineups[0].def;
+    const slotIds = (role, j) => Array.from({ length: segCount }, (_, k) => (lineups[k][role] ?? [])[j] ?? null);
     return (
       <div style={{
         background: "linear-gradient(180deg, #0a1f12 0%, #0d2818 50%, #0a1f12 100%)",
@@ -864,7 +815,7 @@ export default function App() {
             <div style={{ marginBottom: 4 }}>
               <div style={{ fontSize: 11, color: "#ef4444", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Zap size={11} /> Anfallszon</div>
               <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
-                {att.map((id, j) => <PositionSlot key={j} starterId={id} subId={subAtt?.[j]} label={`Anfall ${j + 1}`} periodIdx={periodIdx} subsAreLive={subsAreLive} />)}
+                {att.map((_, j) => <PositionSlot key={j} ids={slotIds("att", j)} label={`Anfall ${j + 1}`} periodIdx={periodIdx} activeSegmentIdx={activeSegmentIdx} />)}
               </div>
             </div>
             <div style={{ textAlign: "center", margin: "10px 0", position: "relative" }}>
@@ -875,14 +826,14 @@ export default function App() {
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Layers size={11} /> Mittfält</div>
                 <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
-                  {(mid ?? []).map((id, j) => <PositionSlot key={j} starterId={id} subId={subMid?.[j]} label={`Mitt ${j + 1}`} periodIdx={periodIdx} subsAreLive={subsAreLive} />)}
+                  {mid.map((_, j) => <PositionSlot key={j} ids={slotIds("mid", j)} label={`Mitt ${j + 1}`} periodIdx={periodIdx} activeSegmentIdx={activeSegmentIdx} />)}
                 </div>
               </div>
             )}
             <div style={{ marginBottom: 4 }}>
               <div style={{ fontSize: 11, color: "#facc15", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={11} /> Försvarszon</div>
               <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
-                {def.map((id, j) => <PositionSlot key={j} starterId={id} subId={subDef?.[j]} label={`Försvar ${j + 1}`} periodIdx={periodIdx} subsAreLive={subsAreLive} />)}
+                {def.map((_, j) => <PositionSlot key={j} ids={slotIds("def", j)} label={`Försvar ${j + 1}`} periodIdx={periodIdx} activeSegmentIdx={activeSegmentIdx} />)}
               </div>
             </div>
           </>
@@ -890,9 +841,13 @@ export default function App() {
           <div style={{ padding: "4px 0 8px" }}>
             <div style={{ fontSize: 11, color: "#4ade80", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 10, fontWeight: 600, opacity: 0.8 }}>På plan</div>
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 10, alignItems: "flex-start" }}>
-              {[...att, ...(mid ?? []), ...def].map((id, j) => {
-                const subList = [...(subAtt ?? []), ...(subMid ?? []), ...(subDef ?? [])];
-                return <PositionSlot key={j} starterId={id} subId={subList[j]} label="" periodIdx={periodIdx} subsAreLive={subsAreLive} />;
+              {[...att, ...mid, ...def].map((_, j) => {
+                const idsAcross = Array.from({ length: segCount }, (_, k) => {
+                  const seg = lineups[k];
+                  const all = [...seg.att, ...(seg.mid ?? []), ...seg.def];
+                  return all[j] ?? null;
+                });
+                return <PositionSlot key={j} ids={idsAcross} label="" periodIdx={periodIdx} activeSegmentIdx={activeSegmentIdx} />;
               })}
             </div>
           </div>
@@ -901,7 +856,7 @@ export default function App() {
           <>
             <div style={{ borderTop: "2px solid #1a5c33", margin: "10px 0" }} />
             <div style={{ display: "flex", justifyContent: "center" }}>
-              <PositionSlot starterId={gk} label="Målvakt" periodIdx={periodIdx} subsAreLive={false} />
+              <PositionSlot ids={[gk]} label="Målvakt" periodIdx={periodIdx} activeSegmentIdx={0} />
             </div>
           </>
         )}
@@ -909,15 +864,20 @@ export default function App() {
     );
   };
 
-  /* Each pitch slot shows the starter (1st half) with the sub (2nd half) below
-     when there's a halftime rotation. Both are always visible; opacity flips
-     so the coach can see who's currently on and who's coming in. */
-  const PositionSlot = ({ starterId, subId, label, periodIdx, subsAreLive }) => {
-    const starter = starterId ? getP(starterId) : null;
-    const sub = (subId && subId !== starterId) ? getP(subId) : null;
-    const showStarter = starter && starter.enabled !== false;
-    const showSub = sub && sub.enabled !== false;
+  /* Renders a stack of chips — one per lineup-segment within a period.
+     Adjacent duplicate ids are collapsed into a single chip that's "active"
+     for any of the contiguous segments. The active segment's chip is at full
+     opacity; the others dim to 0.35 so the coach can see who's currently on
+     and who comes in at the next switch. */
+  const PositionSlot = ({ ids, label, periodIdx, activeSegmentIdx }) => {
     const isGKLabel = label === "Målvakt";
+    /* Collapse adjacent duplicate IDs into runs. */
+    const groups = [];
+    ids.forEach((id, k) => {
+      const last = groups[groups.length - 1];
+      if (last && last.id === id) last.segs.push(k);
+      else groups.push({ id, segs: [k] });
+    });
     return (
       <div style={{ textAlign: "center", flex: "1 1 80px", minWidth: 75, maxWidth: 110, overflow: "hidden" }}>
         {label && (
@@ -925,19 +885,27 @@ export default function App() {
             {label}
           </div>
         )}
-        {showStarter ? (
-          <div style={{ opacity: subsAreLive ? 0.35 : 1, transition: "opacity 0.25s" }}>
-            <Chip id={starterId} inGKSlot={isGKLabel} periodIdx={periodIdx} />
-          </div>
-        ) : !starter && (
-          <div style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 8px", fontSize: 12, color: "#334155" }}>—</div>
-        )}
-        {showSub && (
-          <div style={{ marginTop: 5, opacity: subsAreLive ? 1 : 0.35, transition: "opacity 0.25s", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-            <ArrowUpDown size={10} color="#64748b" style={{ flexShrink: 0 }} />
-            <Chip id={subId} inGKSlot={isGKLabel} periodIdx={periodIdx} />
-          </div>
-        )}
+        {groups.map((g, idx) => {
+          const player = g.id ? getP(g.id) : null;
+          if (player && player.enabled === false) return null;
+          const isActive = g.segs.includes(activeSegmentIdx);
+          if (!g.id) {
+            return idx === 0 ? (
+              <div key={idx} style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 8px", fontSize: 12, color: "#334155", opacity: isActive ? 1 : 0.35 }}>—</div>
+            ) : null;
+          }
+          return (
+            <div key={idx} style={{
+              marginTop: idx === 0 ? 0 : 5,
+              opacity: isActive ? 1 : 0.35,
+              transition: "opacity 0.25s",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+            }}>
+              {idx > 0 && <ArrowUpDown size={10} color="#64748b" style={{ flexShrink: 0 }} />}
+              <Chip id={g.id} inGKSlot={isGKLabel} periodIdx={periodIdx} />
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -1307,10 +1275,15 @@ export default function App() {
             {/* ─── Timer ─── */}
             {(() => {
               const periodSecs  = settings.duration * 60;
-              const halfSecs    = Math.round(periodSecs / 2);
+              const segCount    = (settings.subs ?? 0) + 1;
+              const segSecs     = periodSecs / segCount;
               const isOvertime  = timerElapsed >= periodSecs;
-              const isSwitchDue = settings.subs >= 1 && timerElapsed >= halfSecs;
-              const switchBlink = isSwitchDue && !isOvertime && timerElapsed % 2 === 0;
+              /* "Switch due" once we've passed any non-zero segment boundary,
+                 and stay due for 60s after the most recent boundary. */
+              const lastBoundary = segCount > 1 ? Math.floor(timerElapsed / segSecs) * segSecs : 0;
+              const inSwitchWindow = segCount > 1 && !isOvertime && lastBoundary > 0 && (timerElapsed - lastBoundary) < 60;
+              const isSwitchDue = segCount > 1 && lastBoundary > 0 && !isOvertime;
+              const switchBlink = inSwitchWindow && timerElapsed % 2 === 0;
               const barPct      = Math.min(timerElapsed / periodSecs * 100, 100);
               const barColor    = isOvertime ? "#f87171" : isSwitchDue ? "#fb923c" : "#4ade80";
               const timeColor   = isOvertime ? "#f87171" : isSwitchDue ? "#fb923c" : "#e2e8f0";
@@ -1396,19 +1369,19 @@ export default function App() {
                       seekTimer(Math.max(0, pct) * periodSecs);
                     }}
                     style={{ background: "#0f172a", borderRadius: 6, height: 10, marginBottom: 4, position: "relative", overflow: "hidden", cursor: "pointer" }}>
-                    {settings.subs >= 1 && (
-                      <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 2, background: "#1e3a5f", zIndex: 1 }} />
-                    )}
+                    {segCount > 1 && Array.from({ length: segCount - 1 }, (_, k) => (
+                      <div key={k} style={{ position: "absolute", left: `${((k + 1) / segCount) * 100}%`, top: 0, bottom: 0, width: 2, background: "#1e3a5f", zIndex: 1 }} />
+                    ))}
                     <div style={{ background: barColor, width: `${barPct}%`, height: "100%", borderRadius: 6, transition: "width 0.8s linear, background 0.3s", pointerEvents: "none" }} />
                   </div>
-                  {settings.subs >= 1 && (
+                  {segCount > 1 && (
                     <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", marginBottom: 10, letterSpacing: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}>
-                      <ArrowUpDown size={12} /> byte vid {Math.round(settings.duration / 2)} min
+                      <ArrowUpDown size={12} /> byte var {(settings.duration / segCount).toFixed(settings.duration % segCount === 0 ? 0 : 1)} min
                     </div>
                   )}
 
                   {/* Status banners */}
-                  {isSwitchDue && !isOvertime && timerElapsed < halfSecs + 60 && (
+                  {inSwitchWindow && (
                     <div style={{
                       background: switchBlink ? "#7c2d12" : "#431407",
                       border: "1px solid #ea580c", borderRadius: 8,
@@ -1499,8 +1472,11 @@ export default function App() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: isDesktop ? 24 : 0 }}>
               {plan.map((period, i) => {
                 const pSecs = settings.duration * 60;
-                const hSecs = Math.round(pSecs / 2);
-                const subsAreLive = i === timerPeriod && period.att2 != null && timerElapsed >= hSecs;
+                const segCount = period.lineups?.length ?? 1;
+                const segSecs = segCount > 0 ? pSecs / segCount : pSecs;
+                const activeSegmentIdx = i === timerPeriod && segCount > 1
+                  ? Math.min(segCount - 1, Math.max(0, Math.floor(timerElapsed / segSecs)))
+                  : 0;
                 const hasBench = period.bench.length > 0;
                 return (
                 <div key={i}>
@@ -1547,9 +1523,9 @@ export default function App() {
                       <div style={isDesktop && hasBench ? { display: "grid", gridTemplateColumns: "1fr 150px", alignItems: "stretch" } : {}}>
                         <div>
                           <Pitch
-                            att={period.att} mid={period.mid} def={period.def}
-                            subAtt={period.att2} subMid={period.mid2} subDef={period.def2}
-                            gk={period.gk} periodIdx={i} subsAreLive={subsAreLive}
+                            lineups={period.lineups}
+                            gk={period.gk} periodIdx={i}
+                            activeSegmentIdx={activeSegmentIdx}
                           />
                         </div>
                         {hasBench && (
