@@ -802,7 +802,15 @@ export default function App() {
         {p.isGK && !inGKSlot && (
           <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>mv</span>
         )}
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName(p)}</span>
+        <span style={{
+          overflow: "hidden",
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          lineHeight: 1.15,
+          wordBreak: "break-word",
+          minWidth: 0,
+        }}>{displayName(p)}</span>
       </div>
     );
   };
