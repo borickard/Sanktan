@@ -56,7 +56,7 @@ const _dec = raw => decodeURIComponent(
 
 const packURL  = ({ players, settings, homeTeam, awayTeam, homeScore, awayScore }) => ({
   p: players.map(p => [p.id, p.name, p.isGK ? 1 : 0, p.pref?.[0] ?? "", p.enabled === false ? 0 : 1]),
-  s: [settings.format, settings.periods, settings.duration, settings.subs, settings.shuffleSalt ?? 0, settings.positions === false ? 0 : 1],
+  s: [settings.format, settings.periods, settings.duration, settings.subs, settings.shuffleSalt ?? 0, settings.positions === false ? 0 : 1, settings.keepPositionsInPeriod === false ? 0 : 1],
   h: homeTeam, a: awayTeam, hs: homeScore, as: awayScore,
 });
 
@@ -64,7 +64,7 @@ const unpackURL = c => {
   const pr = { a: "attack", n: "neutral", d: "defense" };
   return {
     players: c.p.map(([id, name, gk, pref, en]) => ({ id, name, isGK: !!gk, pref: pr[pref] ?? null, enabled: en !== 0 })),
-    settings: { format: c.s[0], periods: c.s[1], duration: c.s[2], subs: c.s[3], shuffleSalt: c.s[4] ?? 0, positions: c.s[5] === 0 ? false : true },
+    settings: { format: c.s[0], periods: c.s[1], duration: c.s[2], subs: c.s[3], shuffleSalt: c.s[4] ?? 0, positions: c.s[5] === 0 ? false : true, keepPositionsInPeriod: c.s[6] === 0 ? false : true },
     homeTeam: c.h ?? "", awayTeam: c.a ?? "", homeScore: c.hs ?? 0, awayScore: c.as ?? 0,
   };
 };
@@ -94,6 +94,10 @@ function generatePlan(players, settings) {
   const FULL = duration;
   const fieldCount = fmt.att + fmt.mid + fmt.def;
   const shuffleSalt = settings.shuffleSalt ?? 0;
+  /* When true, players who continue from one segment to the next within a
+     period keep their position; only players coming on take the vacated
+     slots. When false, every segment runs fillPositions independently. */
+  const keepPositionsInPeriod = settings.keepPositionsInPeriod !== false;
 
   const gks = fmt.hasGK ? players.filter(p => p.isGK) : [];
   /* Total minutes per player — used for display only. */
@@ -243,12 +247,51 @@ function generatePlan(players, settings) {
         outfieldMins[p.id] += segMin;
       });
 
-      const pos = fillPositions(segPlayers, i, k, prevPosByPlayer);
+      let pos;
+      if (k === 0 || !keepPositionsInPeriod || lineups.length === 0) {
+        pos = fillPositions(segPlayers, i, k, prevPosByPlayer);
+      } else {
+        /* Lock positions to last segment for players who continue; place
+           comers into the slots vacated by players who left. */
+        const prev = lineups[lineups.length - 1];
+        const newIds = new Set(segPlayers.map(p => p.id));
+        pos = { at: [...prev.att], md: [...prev.mid], df: [...prev.def] };
+        const departingSlots = [];
+        for (const role of ["at", "md", "df"]) {
+          pos[role].forEach((id, j) => {
+            if (id && !newIds.has(id)) departingSlots.push({ role, j });
+            else if (!id) departingSlots.push({ role, j });
+          });
+        }
+        const prevIds = new Set([...prev.att, ...prev.mid, ...prev.def].filter(Boolean));
+        const comers = segPlayers.filter(p => !prevIds.has(p.id));
+        const roleKey = { at: "att", md: "mid", df: "def" };
+        const remaining = [...comers];
+        /* Clear departing slot ids so we re-fill them. */
+        departingSlots.forEach(s => { pos[s.role][s.j] = null; });
+        while (remaining.length > 0 && departingSlots.length > 0) {
+          let best = null;
+          for (const player of remaining) {
+            for (const slot of departingSlots) {
+              const r = roleKey[slot.role];
+              let s = -(posMins[player.id]?.[r] ?? 0);
+              if (prefRole[player.pref] === r) s += PREF_BONUS;
+              s += hash01(`comer|${player.id}|${r}|${i}|${k}|${shuffleSalt}`) * RANDOM_SCALE;
+              if (best === null || s > best.score) best = { player, slot, score: s };
+            }
+          }
+          if (!best) break;
+          pos[best.slot.role][best.slot.j] = best.player.id;
+          remaining.splice(remaining.indexOf(best.player), 1);
+          departingSlots.splice(departingSlots.indexOf(best.slot), 1);
+        }
+      }
       applyPosMins(pos, segMin);
 
       lineups.push({ att: pos.at, mid: pos.md, def: pos.df });
 
-      /* Build prev-pos map for next segment from this segment's assignment. */
+      /* Build prev-pos map for next segment from this segment's assignment.
+         (Only consulted when keepPositionsInPeriod is off — STAY_BONUS.) */
       const nextPrev = {};
       pos.at.forEach(id => { if (id) nextPrev[id] = "att"; });
       pos.md.forEach(id => { if (id) nextPrev[id] = "mid"; });
@@ -299,7 +342,7 @@ export default function App() {
   const [players, setPlayers] = useState(initFromURL?.players ?? DEMO);
   const [newName, setNewName] = useState("");
   const [settings, setSettings] = useState({
-    periods: 3, duration: 15, subs: 1, format: "5v5", shuffleSalt: 0, positions: true,
+    periods: 3, duration: 15, subs: 1, format: "5v5", shuffleSalt: 0, positions: true, keepPositionsInPeriod: true,
     ...(initFromURL?.settings ?? {}),
   });
   const [plan, setPlan]         = useState(() => initFromURL ? generatePlan(initFromURL.players.filter(p => p.enabled !== false), initFromURL.settings) : null);
@@ -614,7 +657,7 @@ export default function App() {
   const resetAll = () => {
     if (!window.confirm("Återställ allt till standardvärden?")) return;
     setPlayers([...DEMO]);
-    setSettings({ periods: 3, duration: 15, subs: 1, format: "5v5", shuffleSalt: 0, positions: true });
+    setSettings({ periods: 3, duration: 15, subs: 1, format: "5v5", shuffleSalt: 0, positions: true, keepPositionsInPeriod: true });
     setHomeTeam(""); setAwayTeam("");
     setHomeScore(0); setAwayScore(0);
     setPlan(null); setOriginalPlan(null);
@@ -1229,6 +1272,24 @@ export default function App() {
                   </button>
                 </div>
               </div>
+
+              {settings.positions !== false && (
+                <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+                  <span style={{ flex: 1, color: "#cbd5e1", fontSize: 14, paddingRight: 8 }} title="Spelare som stannar mellan byten behåller sin position; bara nya spelare tar lediga platser">
+                    Behåll positioner inom period
+                  </span>
+                  <div style={{ display: "flex", gap: 5 }}>
+                    <button onClick={() => setSettings(s => ({ ...s, keepPositionsInPeriod: true }))}
+                      style={{ ...S.btn(settings.keepPositionsInPeriod !== false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
+                      Ja
+                    </button>
+                    <button onClick={() => setSettings(s => ({ ...s, keepPositionsInPeriod: false }))}
+                      style={{ ...S.btn(settings.keepPositionsInPeriod === false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
+                      Nej
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {[
                 ["periods",  "Perioder",      1, 6],
