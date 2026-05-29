@@ -1634,7 +1634,7 @@ export default function App() {
                           <span style={{ fontSize: 13, color: "#cbd5e1" }}>{displayName(p)}</span>
                         </div>
                         <span style={{ fontSize: 13, fontWeight: 700, color: textColor }}>
-                          {m} min
+                          {Math.round(m)} min
                         </span>
                       </div>
                       {showPositions && (
