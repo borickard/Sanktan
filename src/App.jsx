@@ -455,6 +455,19 @@ export default function App() {
      timer. Falls back to the live segment (or 0 for non-live) when unset. */
   const [previewSegments, setPreviewSegments] = useState({});
   const setPreviewSeg = (periodIdx, segIdx) => setPreviewSegments(s => ({ ...s, [periodIdx]: segIdx }));
+
+  /* Compute the live segment for the active period at the App level so an
+     effect can auto-advance the preview tab when the timer crosses a
+     boundary. A manual tab click still wins until the next boundary. */
+  const liveSegOfTimerPeriod = (() => {
+    const segCount = (settings.subs ?? 0) + 1;
+    if (segCount <= 1) return 0;
+    const segSecs = (settings.duration * 60) / segCount;
+    return Math.min(segCount - 1, Math.max(0, Math.floor(timerElapsed / segSecs)));
+  })();
+  useEffect(() => {
+    setPreviewSegments(s => ({ ...s, [timerPeriod]: liveSegOfTimerPeriod }));
+  }, [timerPeriod, liveSegOfTimerPeriod]);
   const [homeTeam,  setHomeTeam]  = useState(initFromURL?.homeTeam  ?? "");
   const [awayTeam,  setAwayTeam]  = useState(initFromURL?.awayTeam  ?? "");
   const [homeScore, setHomeScore] = useState(initFromURL?.homeScore ?? 0);
