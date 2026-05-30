@@ -753,11 +753,40 @@ export default function App() {
   };
 
   const [justShuffled, setJustShuffled] = useState(false);
+  /* Two periods/lineups produce the same plan when GK and every slot in
+     every segment matches by id. We retry doShuffle with increasing salts
+     until we hit a plan that visibly differs, so the button never feels
+     like a no-op when the algorithm just happens to converge again. */
+  const arrEq = (a, b) => (a?.length ?? 0) === (b?.length ?? 0) && (a ?? []).every((x, i) => x === (b ?? [])[i]);
+  const plansEqual = (a, b) => {
+    if (!a || !b || a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i].gk !== b[i].gk) return false;
+      const aL = a[i].lineups ?? [], bL = b[i].lineups ?? [];
+      if (aL.length !== bL.length) return false;
+      for (let k = 0; k < aL.length; k++) {
+        if (!arrEq(aL[k].att, bL[k].att)) return false;
+        if (!arrEq(aL[k].mid ?? [], bL[k].mid ?? [])) return false;
+        if (!arrEq(aL[k].def, bL[k].def)) return false;
+      }
+    }
+    return true;
+  };
+
   const doShuffle = () => {
     if (!plan) return;
-    const nextSettings = { ...settings, shuffleSalt: (settings.shuffleSalt ?? 0) + 1 };
-    setSettings(nextSettings);
-    const next = generatePlan(activePlayers, nextSettings);
+    let salt = settings.shuffleSalt ?? 0;
+    let next;
+    /* Up to 8 tries to find a plan that's not byte-identical to the current
+       one. Constrained rosters (tiny squad / strong preferences) sometimes
+       force the same answer regardless of salt; in that case we accept it
+       and the user sees the Slumpat! flash without a visible change. */
+    for (let attempt = 0; attempt < 8; attempt++) {
+      salt += 1;
+      next = generatePlan(activePlayers, { ...settings, shuffleSalt: salt });
+      if (!plansEqual(plan, next)) break;
+    }
+    setSettings(s => ({ ...s, shuffleSalt: salt }));
     setPlan(next);
     setOriginalPlan(next);
     setSel(null);
