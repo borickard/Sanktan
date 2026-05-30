@@ -1377,6 +1377,35 @@ export default function App() {
               const timeColor   = isOvertime ? "#f87171" : isSwitchDue ? "#fb923c" : "#e2e8f0";
               const clampedPeriod = Math.min(timerPeriod, plan.length - 1);
 
+              /* Upcoming swaps for the active period — used to power the
+                 "Nästa byte om M:SS" panel so the coach can see who comes
+                 on and to which position before the boundary is reached. */
+              const activePeriod = plan[clampedPeriod];
+              const currentSeg = segCount > 1 && !isOvertime
+                ? Math.min(segCount - 1, Math.floor(timerElapsed / segSecs))
+                : 0;
+              const nextSeg = currentSeg + 1;
+              const upcoming = (() => {
+                if (segCount <= 1 || isOvertime || nextSeg >= segCount) return null;
+                const cur = activePeriod.lineups[currentSeg];
+                const nxt = activePeriod.lineups[nextSeg];
+                if (!cur || !nxt) return null;
+                const swaps = [];
+                const collect = (curArr, nxtArr, label) => {
+                  for (let j = 0; j < curArr.length; j++) {
+                    const outId = curArr[j];
+                    const inId = nxtArr?.[j];
+                    if (outId !== inId) swaps.push({ outId, inId, label: `${label} ${j + 1}` });
+                  }
+                };
+                collect(cur.att, nxt.att, "Anfall");
+                collect(cur.mid ?? [], nxt.mid ?? [], "Mitt");
+                collect(cur.def, nxt.def, "Försvar");
+                if (swaps.length === 0) return null;
+                const secsToNext = Math.max(0, Math.ceil(nextSeg * segSecs - timerElapsed));
+                return { swaps, secsToNext };
+              })();
+
               const goPrev = () => { setTimerPeriod(p => Math.max(0, p - 1)); seekTimer(0); };
               const goNext = () => { setTimerPeriod(p => Math.min(plan.length - 1, p + 1)); seekTimer(0); setTimerRunning(true); };
               const reset  = () => { setTimerRunning(false); setTimerElapsed(0); };
@@ -1470,6 +1499,37 @@ export default function App() {
                   {segCount > 1 && (
                     <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", marginBottom: 10, letterSpacing: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}>
                       <ArrowUpDown size={12} /> byte var {(settings.duration / segCount).toFixed(settings.duration % segCount === 0 ? 0 : 1)} min
+                    </div>
+                  )}
+
+                  {/* Upcoming swap preview */}
+                  {upcoming && !inSwitchWindow && (
+                    <div style={{
+                      background: "#0f172a", border: "1px solid #334155", borderRadius: 8,
+                      padding: "8px 12px", marginBottom: 10,
+                    }}>
+                      <div style={{
+                        fontSize: 11, color: "#fb923c", letterSpacing: 2, textTransform: "uppercase",
+                        fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 6, justifyContent: "center",
+                      }}>
+                        <ArrowUpDown size={11} /> Nästa byte om {fmtTime(upcoming.secsToNext)}
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 12, color: "#cbd5e1" }}>
+                        {upcoming.swaps.map((s, idx) => {
+                          const outP = s.outId ? getP(s.outId) : null;
+                          const inP = s.inId ? getP(s.inId) : null;
+                          return (
+                            <div key={idx} style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                              <div style={{ color: "#94a3b8", fontWeight: 600, minWidth: 64 }}>{s.label}</div>
+                              <div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                <span style={{ color: outP ? "#f87171" : "#475569" }}>{outP ? displayName(outP) : "—"}</span>
+                                <span style={{ color: "#64748b", margin: "0 6px" }}>→</span>
+                                <span style={{ color: "#4ade80" }}>{inP ? displayName(inP) : "—"}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
