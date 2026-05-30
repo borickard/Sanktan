@@ -936,7 +936,7 @@ export default function App() {
     );
   };
 
-  const Pitch = ({ lineups, gk, periodIdx, selectedSegmentIdx }) => {
+  const Pitch = ({ lineups, gk, periodIdx, selectedSegmentIdx, prevSegmentIdx }) => {
     const showPositions = settings.positions !== false;
     /* Build per-slot id arrays across all segments so PositionSlot can collapse
        adjacent duplicates and dim everyone except the active segment. */
@@ -956,7 +956,7 @@ export default function App() {
             <div style={{ marginBottom: 4 }}>
               <div style={{ fontSize: 11, color: "#ef4444", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Zap size={11} /> Anfallszon</div>
               <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
-                {att.map((_, j) => <PositionSlot key={j} ids={slotIds("att", j)} label={`Anfall ${j + 1}`} periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} />)}
+                {att.map((_, j) => <PositionSlot key={j} ids={slotIds("att", j)} label={`Anfall ${j + 1}`} periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
               </div>
             </div>
             <div style={{ textAlign: "center", margin: "10px 0", position: "relative" }}>
@@ -967,14 +967,14 @@ export default function App() {
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Layers size={11} /> Mittfält</div>
                 <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
-                  {mid.map((_, j) => <PositionSlot key={j} ids={slotIds("mid", j)} label={`Mitt ${j + 1}`} periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} />)}
+                  {mid.map((_, j) => <PositionSlot key={j} ids={slotIds("mid", j)} label={`Mitt ${j + 1}`} periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
                 </div>
               </div>
             )}
             <div style={{ marginBottom: 4 }}>
               <div style={{ fontSize: 11, color: "#facc15", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={11} /> Försvarszon</div>
               <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
-                {def.map((_, j) => <PositionSlot key={j} ids={slotIds("def", j)} label={`Försvar ${j + 1}`} periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} />)}
+                {def.map((_, j) => <PositionSlot key={j} ids={slotIds("def", j)} label={`Försvar ${j + 1}`} periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
               </div>
             </div>
           </>
@@ -988,7 +988,7 @@ export default function App() {
                   const all = [...seg.att, ...(seg.mid ?? []), ...seg.def];
                   return all[j] ?? null;
                 });
-                return <PositionSlot key={j} ids={idsAcross} label="" periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} />;
+                return <PositionSlot key={j} ids={idsAcross} label="" periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />;
               })}
             </div>
           </div>
@@ -1010,17 +1010,18 @@ export default function App() {
      for any of the contiguous segments. The active segment's chip is at full
      opacity; the others dim to 0.35 so the coach can see who's currently on
      and who comes in at the next switch. */
-  /* Renders the slot's player for the selected segment, plus — when the next
-     segment swaps in a different player — a small "incoming" chip below.
-     The outgoing player gets a red border + red-tinted bg, the incoming gets
-     a green border + green-tinted bg. So at a glance the coach knows who's
-     about to leave and who's coming on. */
-  const PositionSlot = ({ ids, label, periodIdx, selectedSegmentIdx }) => {
+  /* Renders the slot's player for the selected segment.
+     When prevSegmentIdx is set (live switch window only), the current
+     occupant is shown with a green border/tint = "just came on", and the
+     previous occupant — if different — is shown below with a red
+     border/tint = "just left". Outside the switch window prevSegmentIdx is
+     null and we just show the selected segment's chip plainly, so previewing
+     other segments via the header tabs reads as a clean lineup. */
+  const PositionSlot = ({ ids, label, periodIdx, selectedSegmentIdx, prevSegmentIdx }) => {
     const isGKLabel = label === "Målvakt";
     const curId = ids[selectedSegmentIdx] ?? null;
-    const nextIdx = selectedSegmentIdx + 1;
-    const nextId = nextIdx < ids.length ? (ids[nextIdx] ?? null) : null;
-    const hasNextSwitch = nextId != null && nextId !== curId;
+    const prevId = prevSegmentIdx != null ? (ids[prevSegmentIdx] ?? null) : null;
+    const justChanged = prevId != null && prevId !== curId;
     return (
       <div style={{ textAlign: "center", flex: "1 1 80px", minWidth: 75, maxWidth: 110, overflow: "hidden" }}>
         {label && (
@@ -1029,13 +1030,13 @@ export default function App() {
           </div>
         )}
         {curId
-          ? <Chip id={curId} inGKSlot={isGKLabel} periodIdx={periodIdx} flavor={hasNextSwitch ? "out" : undefined} />
+          ? <Chip id={curId} inGKSlot={isGKLabel} periodIdx={periodIdx} flavor={justChanged ? "in" : undefined} />
           : <div style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 8px", fontSize: 12, color: "#334155" }}>—</div>
         }
-        {hasNextSwitch && (
+        {justChanged && prevId && (
           <div style={{ marginTop: 5, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
             <ArrowUpDown size={10} color="#64748b" style={{ flexShrink: 0 }} />
-            <Chip id={nextId} inGKSlot={isGKLabel} periodIdx={periodIdx} flavor="in" />
+            <Chip id={prevId} inGKSlot={isGKLabel} periodIdx={periodIdx} flavor="out" />
           </div>
         )}
       </div>
@@ -1665,6 +1666,20 @@ export default function App() {
                   ? Math.min(segCount - 1, Math.max(0, Math.floor(timerElapsed / segSecs)))
                   : 0;
                 const selectedSegmentIdx = previewSegments[i] ?? liveSeg;
+                /* The red/green highlight only fires during the live switch
+                   window — 60s after the timer crosses into a new segment of
+                   the active period — and only while the coach is viewing
+                   that live segment. Outside that window we show the
+                   selected segment plainly. */
+                const lastBoundarySec = liveSeg * segSecs;
+                const inSwitchWindow = i === timerPeriod
+                  && segCount > 1
+                  && timerElapsed < pSecs
+                  && liveSeg > 0
+                  && (timerElapsed - lastBoundarySec) < 60;
+                const prevSegmentIdx = (inSwitchWindow && selectedSegmentIdx === liveSeg)
+                  ? selectedSegmentIdx - 1
+                  : null;
                 const hasBench = period.bench.length > 0;
                 return (
                 <div key={i}>
@@ -1743,6 +1758,7 @@ export default function App() {
                             lineups={period.lineups}
                             gk={period.gk} periodIdx={i}
                             selectedSegmentIdx={selectedSegmentIdx}
+                            prevSegmentIdx={prevSegmentIdx}
                           />
                         </div>
                         {hasBench && (
