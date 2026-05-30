@@ -450,6 +450,23 @@ export default function App() {
     if (next.has(idx)) next.delete(idx); else next.add(idx);
     return next;
   });
+  /* Auto-collapse a period when the timer moves on to a later one — keeps
+     the focus on the upcoming period without manual housekeeping. Only
+     fires on forward moves (goNext / natural advance); going back leaves
+     periods expanded so the coach can review. */
+  const prevTimerPeriodRef = useRef(timerPeriod);
+  useEffect(() => {
+    if (timerPeriod > prevTimerPeriodRef.current) {
+      const leaving = prevTimerPeriodRef.current;
+      setCollapsedPeriods(s => {
+        if (s.has(leaving)) return s;
+        const next = new Set(s);
+        next.add(leaving);
+        return next;
+      });
+    }
+    prevTimerPeriodRef.current = timerPeriod;
+  }, [timerPeriod]);
   /* Per-period segment preview. Lets the coach jump ahead to a later
      segment in any period via the header tabs without affecting the
      timer. Falls back to the live segment (or 0 for non-live) when unset. */
