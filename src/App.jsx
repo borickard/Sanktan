@@ -411,15 +411,23 @@ export default function App() {
   const [kvLoading, setKvLoading] = useState(isShortCode);
   const [winW, setWinW]     = useState(window.innerWidth);
   /* Restore the match timer across page refresh. If it was running, advance
-     elapsed by wall-clock delta since the last save so it keeps wall time. */
+     elapsed by wall-clock delta since the last save so it keeps wall time.
+     Stale state (saved > MAX_AGE ago, or wall-clock delta beyond the period
+     length) is treated as a fresh session — a tab left open overnight
+     shouldn't produce a 9-hour elapsed counter when the user comes back. */
   const restoredTimer = (() => {
     try {
       const raw = localStorage.getItem("sanktan-timer-v1");
       if (!raw) return null;
       const d = JSON.parse(raw);
+      const MAX_AGE = 6 * 60 * 60 * 1000; // 6 hours
+      if (d.savedAt && Date.now() - d.savedAt > MAX_AGE) return null;
       let elapsed = d.elapsed ?? 0;
       if (d.running && d.startedAt) {
-        elapsed = (d.baseElapsed ?? 0) + Math.floor((Date.now() - d.startedAt) / 1000);
+        const wallDelta = Math.floor((Date.now() - d.startedAt) / 1000);
+        /* Cap the auto-advance so a paused tab can't push elapsed past the
+           wall-clock cap; a real match resume will be a few minutes at most. */
+        elapsed = (d.baseElapsed ?? 0) + Math.min(wallDelta, MAX_AGE / 1000);
       }
       return { period: d.period ?? 0, elapsed: Math.max(0, elapsed), running: !!d.running };
     } catch { return null; }
@@ -632,6 +640,7 @@ export default function App() {
         running: timerRunning,
         startedAt: timerRunning ? startedAtRef.current : null,
         baseElapsed: timerRunning ? baseElapsedRef.current : timerElapsed,
+        savedAt: Date.now(),
       }));
     } catch {}
   }, [timerPeriod, timerElapsed, timerRunning]);
@@ -690,6 +699,12 @@ export default function App() {
     setOriginalPlan(newPlan);
     setTab("plan");
     setSel(null);
+    /* Generating a fresh plan is a new match — zero out the timer so any
+       persisted state from a previous session doesn't bleed in. */
+    setTimerRunning(false);
+    setTimerElapsed(0);
+    setTimerPeriod(0);
+    try { localStorage.removeItem("sanktan-timer-v1"); } catch {}
   };
 
   const doReset = () => {
