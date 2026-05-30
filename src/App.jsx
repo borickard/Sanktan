@@ -1666,20 +1666,11 @@ export default function App() {
                   ? Math.min(segCount - 1, Math.max(0, Math.floor(timerElapsed / segSecs)))
                   : 0;
                 const selectedSegmentIdx = previewSegments[i] ?? liveSeg;
-                /* The red/green highlight only fires during the live switch
-                   window — 60s after the timer crosses into a new segment of
-                   the active period — and only while the coach is viewing
-                   that live segment. Outside that window we show the
-                   selected segment plainly. */
-                const lastBoundarySec = liveSeg * segSecs;
-                const inSwitchWindow = i === timerPeriod
-                  && segCount > 1
-                  && timerElapsed < pSecs
-                  && liveSeg > 0
-                  && (timerElapsed - lastBoundarySec) < 60;
-                const prevSegmentIdx = (inSwitchWindow && selectedSegmentIdx === liveSeg)
-                  ? selectedSegmentIdx - 1
-                  : null;
+                /* Red/green highlight whenever the user is on any tab past the
+                   first, comparing the current segment to the previous one:
+                   incoming = green, outgoing (shown below) = red. The first
+                   tab has nothing to compare against, so chips render plain. */
+                const prevSegmentIdx = selectedSegmentIdx > 0 ? selectedSegmentIdx - 1 : null;
                 const hasBench = period.bench.length > 0;
                 return (
                 <div key={i}>
@@ -1698,18 +1689,21 @@ export default function App() {
                     outlineOffset: 2,
                   }}>
 
-                    {/* Period header */}
+                    {/* Period header — only the chevron + "Period N" label
+                        toggles collapse so accidental taps on the segment
+                        tabs (or even empty space) don't fold the period. */}
                     <div
-                      onClick={() => togglePeriod(i)}
-                      title={collapsedPeriods.has(i) ? "Expandera period" : "Komprimera period"}
                       style={{
                         background: "linear-gradient(135deg, #0a2e1a 0%, #0d3821 100%)",
                         padding: "10px 16px",
                         display: "flex", justifyContent: "space-between", alignItems: "center",
                         borderBottom: collapsedPeriods.has(i) ? "none" : "1px solid #1a5c33",
-                        cursor: "pointer", userSelect: "none",
+                        userSelect: "none",
                       }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div
+                        onClick={() => togglePeriod(i)}
+                        title={collapsedPeriods.has(i) ? "Expandera period" : "Komprimera period"}
+                        style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                         {collapsedPeriods.has(i)
                           ? <ChevronRight size={16} color="#4ade80" />
                           : <ChevronDown size={16} color="#4ade80" />}
