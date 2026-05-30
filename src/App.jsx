@@ -25,13 +25,68 @@ const GK_COLOR = "#22c55e";
 const PM = Object.fromEntries(PREFS.map(p => [p.key, p]));
 
 const FORMATS = [
-  { key: "3v3",   label: "3v3",   hasGK: false, total: 3,  att: 1, mid: 0, def: 2 },
-  { key: "5v5",   label: "5v5",   hasGK: true,  total: 5,  att: 2, mid: 0, def: 2 },
-  { key: "7v7",   label: "7v7",   hasGK: true,  total: 7,  att: 2, mid: 2, def: 2 },
+  { key: "3v3",   label: "3v3",   hasGK: false, total: 3,
+    formations: [
+      { name: "1-2",     def: 2, mid: 0, att: 1 },
+      { name: "2-1",     def: 1, mid: 0, att: 2 },
+    ],
+  },
+  { key: "5v5",   label: "5v5",   hasGK: true,  total: 5,
+    formations: [
+      { name: "2-2",     def: 2, mid: 0, att: 2 },
+      { name: "1-2-1",   def: 1, mid: 2, att: 1 },
+      { name: "2-1-1",   def: 2, mid: 1, att: 1 },
+      { name: "1-1-2",   def: 1, mid: 1, att: 2 },
+    ],
+  },
+  { key: "7v7",   label: "7v7",   hasGK: true,  total: 7,
+    formations: [
+      { name: "2-2-2",   def: 2, mid: 2, att: 2 },
+      { name: "3-2-1",   def: 3, mid: 2, att: 1 },
+      { name: "2-3-1",   def: 2, mid: 3, att: 1 },
+      { name: "1-3-2",   def: 1, mid: 3, att: 2 },
+    ],
+  },
+  { key: "9v9",   label: "9v9",   hasGK: true,  total: 9,
+    formations: [
+      { name: "3-3-2",   def: 3, mid: 3, att: 2 },
+      { name: "2-3-3",   def: 2, mid: 3, att: 3 },
+      { name: "3-4-1",   def: 3, mid: 4, att: 1 },
+      { name: "2-4-2",   def: 2, mid: 4, att: 2 },
+      { name: "4-3-1",   def: 4, mid: 3, att: 1 },
+    ],
+  },
+  { key: "11v11", label: "11v11", hasGK: true,  total: 11,
+    formations: [
+      { name: "4-4-2",   def: 4, mid: 4, att: 2 },
+      { name: "4-3-3",   def: 4, mid: 3, att: 3 },
+      { name: "3-5-2",   def: 3, mid: 5, att: 2 },
+      { name: "3-4-3",   def: 3, mid: 4, att: 3 },
+      { name: "5-3-2",   def: 5, mid: 3, att: 2 },
+      { name: "5-4-1",   def: 5, mid: 4, att: 1 },
+    ],
+  },
+];
+/* Lookup helpers: pick a formation by name within a format. */
+const formationForKey = (fmtKey, formationName) => {
+  const fmt = FORMATS.find(f => f.key === fmtKey);
+  if (!fmt) return null;
+  return fmt.formations.find(fm => fm.name === formationName) ?? fmt.formations[0];
+};
+const defaultFormationName = fmtKey => {
+  const fmt = FORMATS.find(f => f.key === fmtKey);
+  return fmt?.formations[0]?.name ?? null;
+};
   { key: "9v9",   label: "9v9",   hasGK: true,  total: 9,  att: 2, mid: 3, def: 3 },
   { key: "11v11", label: "11v11", hasGK: true,  total: 11, att: 3, mid: 3, def: 4 },
 ];
 const FM = Object.fromEntries(FORMATS.map(f => [f.key, f]));
+/* Merge format (hasGK, total, label) with the chosen formation (att, mid, def). */
+const getFmt = (settings) => {
+  const format = FM[settings.format] ?? FM["5v5"];
+  const formation = formationForKey(settings.format, settings.formation) ?? format.formations[0];
+  return { ...format, ...formation };
+};
 
 const mkP = (name, isGK = false, pref = "neutral") => ({ id: uid(), name, isGK, pref, enabled: true });
 
@@ -56,7 +111,7 @@ const _dec = raw => decodeURIComponent(
 
 const packURL  = ({ players, settings, homeTeam, awayTeam, homeScore, awayScore }) => ({
   p: players.map(p => [p.id, p.name, p.isGK ? 1 : 0, p.pref?.[0] ?? "", p.enabled === false ? 0 : 1]),
-  s: [settings.format, settings.periods, settings.duration, settings.subs, settings.shuffleSalt ?? 0, settings.positions === false ? 0 : 1, settings.keepPositionsInPeriod === false ? 0 : 1],
+  s: [settings.format, settings.periods, settings.duration, settings.subs, settings.shuffleSalt ?? 0, settings.positions === false ? 0 : 1, settings.keepPositionsInPeriod === false ? 0 : 1, settings.formation ?? defaultFormationName(settings.format)],
   h: homeTeam, a: awayTeam, hs: homeScore, as: awayScore,
 });
 
@@ -64,7 +119,7 @@ const unpackURL = c => {
   const pr = { a: "attack", n: "neutral", d: "defense" };
   return {
     players: c.p.map(([id, name, gk, pref, en]) => ({ id, name, isGK: !!gk, pref: pr[pref] ?? null, enabled: en !== 0 })),
-    settings: { format: c.s[0], periods: c.s[1], duration: c.s[2], subs: c.s[3], shuffleSalt: c.s[4] ?? 0, positions: c.s[5] === 0 ? false : true, keepPositionsInPeriod: c.s[6] === 0 ? false : true },
+    settings: { format: c.s[0], periods: c.s[1], duration: c.s[2], subs: c.s[3], shuffleSalt: c.s[4] ?? 0, positions: c.s[5] === 0 ? false : true, keepPositionsInPeriod: c.s[6] === 0 ? false : true, formation: c.s[7] ?? defaultFormationName(c.s[0]) },
     homeTeam: c.h ?? "", awayTeam: c.a ?? "", homeScore: c.hs ?? 0, awayScore: c.as ?? 0,
   };
 };
@@ -90,7 +145,7 @@ bumpUid(initFromURL?.players);
 /* ─── Auto-generate algorithm ─── */
 function generatePlan(players, settings) {
   const { periods, duration, subs } = settings;
-  const fmt = FM[settings.format] ?? FM["5v5"];
+  const fmt = getFmt(settings);
   const FULL = duration;
   const fieldCount = fmt.att + fmt.mid + fmt.def;
   const shuffleSalt = settings.shuffleSalt ?? 0;
@@ -342,7 +397,7 @@ export default function App() {
   const [players, setPlayers] = useState(initFromURL?.players ?? DEMO);
   const [newName, setNewName] = useState("");
   const [settings, setSettings] = useState({
-    periods: 3, duration: 15, subs: 1, format: "5v5", shuffleSalt: 0, positions: true, keepPositionsInPeriod: true,
+    periods: 3, duration: 15, subs: 1, format: "5v5", formation: defaultFormationName("5v5"), shuffleSalt: 0, positions: true, keepPositionsInPeriod: true,
     ...(initFromURL?.settings ?? {}),
   });
   const [plan, setPlan]         = useState(() => initFromURL ? generatePlan(initFromURL.players.filter(p => p.enabled !== false), initFromURL.settings) : null);
@@ -591,7 +646,7 @@ export default function App() {
     }
   };
 
-  const fmt       = FM[settings.format] ?? FM["5v5"];
+  const fmt       = getFmt(settings);
   const isDesktop = winW >= 700;
   const fmtTime   = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   const getP      = id => players.find(p => p.id === id);
@@ -657,7 +712,7 @@ export default function App() {
   const resetAll = () => {
     if (!window.confirm("Återställ allt till standardvärden?")) return;
     setPlayers([...DEMO]);
-    setSettings({ periods: 3, duration: 15, subs: 1, format: "5v5", shuffleSalt: 0, positions: true, keepPositionsInPeriod: true });
+    setSettings({ periods: 3, duration: 15, subs: 1, format: "5v5", formation: defaultFormationName("5v5"), shuffleSalt: 0, positions: true, keepPositionsInPeriod: true });
     setHomeTeam(""); setAwayTeam("");
     setHomeScore(0); setAwayScore(0);
     setPlan(null); setOriginalPlan(null);
@@ -1238,12 +1293,12 @@ export default function App() {
               </div>
 
               {/* Format selector */}
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 12 }}>
                 <span style={{ color: "#cbd5e1", fontSize: 14, display: "block", marginBottom: 8 }}>Spelform</span>
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                   {FORMATS.map(f => (
                     <button key={f.key}
-                      onClick={() => setSettings(s => ({ ...s, format: f.key }))}
+                      onClick={() => setSettings(s => ({ ...s, format: f.key, formation: defaultFormationName(f.key) }))}
                       style={{
                         ...S.btn(settings.format === f.key ? "primary" : "secondary"),
                         padding: "5px 12px", fontSize: 13,
@@ -1258,6 +1313,31 @@ export default function App() {
                   </div>
                 )}
               </div>
+
+              {/* Formation selector */}
+              {(() => {
+                const currentFmt = FM[settings.format] ?? FM["5v5"];
+                const formations = currentFmt.formations ?? [];
+                if (formations.length <= 1) return null;
+                const activeName = settings.formation ?? formations[0].name;
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    <span style={{ color: "#cbd5e1", fontSize: 14, display: "block", marginBottom: 8 }} title="Försvar – mittfält – anfall">Formation</span>
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                      {formations.map(fm => (
+                        <button key={fm.name}
+                          onClick={() => setSettings(s => ({ ...s, formation: fm.name }))}
+                          style={{
+                            ...S.btn(activeName === fm.name ? "primary" : "secondary"),
+                            padding: "5px 12px", fontSize: 13, fontVariantNumeric: "tabular-nums",
+                          }}>
+                          {fm.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
                 <span style={{ flex: 1, color: "#cbd5e1", fontSize: 14 }}>Positioner</span>
