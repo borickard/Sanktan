@@ -77,9 +77,6 @@ const defaultFormationName = fmtKey => {
   const fmt = FORMATS.find(f => f.key === fmtKey);
   return fmt?.formations[0]?.name ?? null;
 };
-  { key: "9v9",   label: "9v9",   hasGK: true,  total: 9,  att: 2, mid: 3, def: 3 },
-  { key: "11v11", label: "11v11", hasGK: true,  total: 11, att: 3, mid: 3, def: 4 },
-];
 const FM = Object.fromEntries(FORMATS.map(f => [f.key, f]));
 /* Merge format (hasGK, total, label) with the chosen formation (att, mid, def). */
 const getFmt = (settings) => {
