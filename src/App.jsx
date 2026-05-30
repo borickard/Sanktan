@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Zap, Shuffle, Shield, Layers,
+  Zap, Shuffle, Shield,
   Play, Pause, RotateCcw, RefreshCw, SkipBack, SkipForward,
   ArrowUpDown, AlertTriangle, Link2, X, Check,
   Users, ClipboardList, Pencil, ChevronRight, ChevronUp, ChevronDown,
@@ -938,16 +938,44 @@ export default function App() {
         )}
         <span style={{
           overflow: "hidden",
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          lineHeight: 1.15,
-          wordBreak: "break-word",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
           minWidth: 0,
         }}>{displayName(p)}</span>
       </div>
     );
   };
+
+  /* A horizontal pitch row with a rotated zone label on the left edge.
+     Saves the vertical space the old "ANFALLSZON / MITTFÄLT / FÖRSVARSZON"
+     headers (plus per-slot Anfall 1 / Mitt 2 / … labels) used to take. */
+  const ZoneRow = ({ label, color, children }) => (
+    <div style={{ display: "flex", alignItems: "stretch", marginBottom: 4 }}>
+      <div style={{
+        writingMode: "vertical-rl",
+        transform: "rotate(180deg)",
+        fontSize: 10,
+        color,
+        fontWeight: 700,
+        letterSpacing: 2,
+        textTransform: "uppercase",
+        padding: "4px 2px",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0,
+        opacity: 0.8,
+      }}>
+        {label}
+      </div>
+      <div style={{
+        flex: 1, minWidth: 0,
+        display: "flex", flexWrap: "wrap", justifyContent: "center",
+        gap: 8, rowGap: 10, alignItems: "flex-start",
+        paddingLeft: 4,
+      }}>
+        {children}
+      </div>
+    </div>
+  );
 
   const Pitch = ({ lineups, gk, periodIdx, selectedSegmentIdx, prevSegmentIdx }) => {
     const showPositions = settings.positions !== false;
@@ -966,30 +994,21 @@ export default function App() {
         <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(180deg, transparent 0px, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px)", pointerEvents: "none" }} />
         {showPositions ? (
           <>
-            <div style={{ marginBottom: 4 }}>
-              <div style={{ fontSize: 11, color: "#ef4444", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Zap size={11} /> Anfallszon</div>
-              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
-                {att.map((_, j) => <PositionSlot key={j} ids={slotIds("att", j)} label={`Anfall ${j + 1}`} periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
-              </div>
-            </div>
-            <div style={{ textAlign: "center", margin: "10px 0", position: "relative" }}>
+            <ZoneRow label="Anfall" color="#ef4444">
+              {att.map((_, j) => <PositionSlot key={j} ids={slotIds("att", j)} label="" periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
+            </ZoneRow>
+            <div style={{ textAlign: "center", margin: "8px 0", position: "relative" }}>
               <div style={{ borderTop: "1px dashed #1a5c33", position: "absolute", top: "50%", left: 0, right: 0 }} />
               <div style={{ display: "inline-block", width: 18, height: 18, borderRadius: "50%", border: "1px dashed #1a5c33", background: "#0d2818", position: "relative", lineHeight: "16px", fontSize: 8, color: "#1a5c33" }}>○</div>
             </div>
             {fmt.mid > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Layers size={11} /> Mittfält</div>
-                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
-                  {mid.map((_, j) => <PositionSlot key={j} ids={slotIds("mid", j)} label={`Mitt ${j + 1}`} periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
-                </div>
-              </div>
+              <ZoneRow label="Mittfält" color="#f97316">
+                {mid.map((_, j) => <PositionSlot key={j} ids={slotIds("mid", j)} label="" periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
+              </ZoneRow>
             )}
-            <div style={{ marginBottom: 4 }}>
-              <div style={{ fontSize: 11, color: "#facc15", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={11} /> Försvarszon</div>
-              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
-                {def.map((_, j) => <PositionSlot key={j} ids={slotIds("def", j)} label={`Försvar ${j + 1}`} periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
-              </div>
-            </div>
+            <ZoneRow label="Försvar" color="#facc15">
+              {def.map((_, j) => <PositionSlot key={j} ids={slotIds("def", j)} label="" periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
+            </ZoneRow>
           </>
         ) : (
           <div style={{ padding: "4px 0 8px" }}>
@@ -1036,7 +1055,7 @@ export default function App() {
     const prevId = prevSegmentIdx != null ? (ids[prevSegmentIdx] ?? null) : null;
     const justChanged = prevId != null && prevId !== curId;
     return (
-      <div style={{ textAlign: "center", flex: "1 1 80px", minWidth: 75, maxWidth: 110, overflow: "hidden" }}>
+      <div style={{ textAlign: "center", flex: "1 1 90px", minWidth: 75, maxWidth: 160, overflow: "hidden" }}>
         {label && (
           <div style={{ fontSize: 11, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5, fontWeight: 600 }}>
             {label}
