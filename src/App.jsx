@@ -950,7 +950,7 @@ export default function App() {
      Saves the vertical space the old "ANFALLSZON / MITTFÄLT / FÖRSVARSZON"
      headers (plus per-slot Anfall 1 / Mitt 2 / … labels) used to take. */
   const ZoneRow = ({ label, color, children }) => (
-    <div style={{ display: "flex", alignItems: "stretch", marginBottom: 4 }}>
+    <div style={{ display: "flex", alignItems: "stretch", marginBottom: 14 }}>
       <div style={{
         writingMode: "vertical-rl",
         transform: "rotate(180deg)",
@@ -997,10 +997,6 @@ export default function App() {
             <ZoneRow label="Anfall" color="#ef4444">
               {att.map((_, j) => <PositionSlot key={j} ids={slotIds("att", j)} label="" periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
             </ZoneRow>
-            <div style={{ textAlign: "center", margin: "8px 0", position: "relative" }}>
-              <div style={{ borderTop: "1px dashed #1a5c33", position: "absolute", top: "50%", left: 0, right: 0 }} />
-              <div style={{ display: "inline-block", width: 18, height: 18, borderRadius: "50%", border: "1px dashed #1a5c33", background: "#0d2818", position: "relative", lineHeight: "16px", fontSize: 8, color: "#1a5c33" }}>○</div>
-            </div>
             {fmt.mid > 0 && (
               <ZoneRow label="Mittfält" color="#f97316">
                 {mid.map((_, j) => <PositionSlot key={j} ids={slotIds("mid", j)} label="" periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
