@@ -1694,9 +1694,6 @@ export default function App() {
               );
             })()}
 
-            {/* Share link */}
-            <div style={{ marginBottom: 16 }}>{renderShareControl()}</div>
-
             {/* Two-column on desktop: periods left, stats right */}
             <div style={isDesktop ? { display: "grid", gridTemplateColumns: "1fr 320px", gap: 24, alignItems: "start" } : {}}>
 
@@ -1942,6 +1939,9 @@ export default function App() {
             </button>
             </div>
             </div>
+
+            {/* Share link at the bottom of the plan view */}
+            <div style={{ marginTop: 20 }}>{renderShareControl()}</div>
 
           </div>
         )}
