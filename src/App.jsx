@@ -77,6 +77,9 @@ const defaultFormationName = fmtKey => {
   const fmt = FORMATS.find(f => f.key === fmtKey);
   return fmt?.formations[0]?.name ?? null;
 };
+/* Per-format default period length in minutes — applied when the user
+   picks a format, matching common youth-football norms in Sweden. */
+const FORMAT_DEFAULT_DURATION = { "3v3": 12, "5v5": 15, "7v7": 20, "9v9": 25, "11v11": 35 };
 const FM = Object.fromEntries(FORMATS.map(f => [f.key, f]));
 /* Merge format (hasGK, total, label) with the chosen formation (att, mid, def). */
 const getFmt = (settings) => {
@@ -447,6 +450,11 @@ export default function App() {
     if (next.has(idx)) next.delete(idx); else next.add(idx);
     return next;
   });
+  /* Per-period segment preview. Lets the coach jump ahead to a later
+     segment in any period via the header tabs without affecting the
+     timer. Falls back to the live segment (or 0 for non-live) when unset. */
+  const [previewSegments, setPreviewSegments] = useState({});
+  const setPreviewSeg = (periodIdx, segIdx) => setPreviewSegments(s => ({ ...s, [periodIdx]: segIdx }));
   const [homeTeam,  setHomeTeam]  = useState(initFromURL?.homeTeam  ?? "");
   const [awayTeam,  setAwayTeam]  = useState(initFromURL?.awayTeam  ?? "");
   const [homeScore, setHomeScore] = useState(initFromURL?.homeScore ?? 0);
@@ -877,7 +885,7 @@ export default function App() {
   const totalPossible = settings.periods * settings.duration;
 
   /* ─── Sub-components ─── */
-  const Chip = ({ id, small = false, inGKSlot = false, periodIdx }) => {
+  const Chip = ({ id, small = false, inGKSlot = false, periodIdx, flavor }) => {
     if (!id) return null;
     const p = getP(id);
     if (!p) return null;
@@ -885,6 +893,9 @@ export default function App() {
     const isSelected = sel?.id === id;
     const isSel2nd = sel && sel.id !== id;
     const activeGK = p.isGK && inGKSlot;
+    /* flavor "out" = leaves at next switch, "in" = comes on at next switch. */
+    const flavorBg     = flavor === "out" ? "#3f1818" : flavor === "in" ? "#0f2a1c" : null;
+    const flavorBorder = flavor === "out" ? "#ef4444" : flavor === "in" ? "#22c55e" : null;
 
     return (
       <div
@@ -892,9 +903,9 @@ export default function App() {
         style={{
           display: "inline-flex", alignItems: "center", gap: 4,
           maxWidth: "100%", overflow: "hidden",
-          background: isSelected ? "#fef08a" : "#0f172a",
+          background: isSelected ? "#fef08a" : (flavorBg ?? "#0f172a"),
           color: isSelected ? "#0f172a" : "#e2e8f0",
-          border: `2px solid ${isSelected ? "#fbbf24" : activeGK ? GK_COLOR : "#334155"}`,
+          border: `2px solid ${isSelected ? "#fbbf24" : activeGK ? GK_COLOR : (flavorBorder ?? "#334155")}`,
           borderRadius: 8,
           padding: small ? "3px 7px" : "4px 8px",
           fontSize: small ? 12 : 13,
@@ -925,7 +936,7 @@ export default function App() {
     );
   };
 
-  const Pitch = ({ lineups, gk, periodIdx, activeSegmentIdx }) => {
+  const Pitch = ({ lineups, gk, periodIdx, selectedSegmentIdx }) => {
     const showPositions = settings.positions !== false;
     /* Build per-slot id arrays across all segments so PositionSlot can collapse
        adjacent duplicates and dim everyone except the active segment. */
@@ -945,7 +956,7 @@ export default function App() {
             <div style={{ marginBottom: 4 }}>
               <div style={{ fontSize: 11, color: "#ef4444", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Zap size={11} /> Anfallszon</div>
               <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
-                {att.map((_, j) => <PositionSlot key={j} ids={slotIds("att", j)} label={`Anfall ${j + 1}`} periodIdx={periodIdx} activeSegmentIdx={activeSegmentIdx} />)}
+                {att.map((_, j) => <PositionSlot key={j} ids={slotIds("att", j)} label={`Anfall ${j + 1}`} periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} />)}
               </div>
             </div>
             <div style={{ textAlign: "center", margin: "10px 0", position: "relative" }}>
@@ -956,14 +967,14 @@ export default function App() {
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, color: "#f97316", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Layers size={11} /> Mittfält</div>
                 <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
-                  {mid.map((_, j) => <PositionSlot key={j} ids={slotIds("mid", j)} label={`Mitt ${j + 1}`} periodIdx={periodIdx} activeSegmentIdx={activeSegmentIdx} />)}
+                  {mid.map((_, j) => <PositionSlot key={j} ids={slotIds("mid", j)} label={`Mitt ${j + 1}`} periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} />)}
                 </div>
               </div>
             )}
             <div style={{ marginBottom: 4 }}>
               <div style={{ fontSize: 11, color: "#facc15", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 8, fontWeight: 600, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}><Shield size={11} /> Försvarszon</div>
               <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, rowGap: 10, alignItems: "flex-start" }}>
-                {def.map((_, j) => <PositionSlot key={j} ids={slotIds("def", j)} label={`Försvar ${j + 1}`} periodIdx={periodIdx} activeSegmentIdx={activeSegmentIdx} />)}
+                {def.map((_, j) => <PositionSlot key={j} ids={slotIds("def", j)} label={`Försvar ${j + 1}`} periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} />)}
               </div>
             </div>
           </>
@@ -977,7 +988,7 @@ export default function App() {
                   const all = [...seg.att, ...(seg.mid ?? []), ...seg.def];
                   return all[j] ?? null;
                 });
-                return <PositionSlot key={j} ids={idsAcross} label="" periodIdx={periodIdx} activeSegmentIdx={activeSegmentIdx} />;
+                return <PositionSlot key={j} ids={idsAcross} label="" periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} />;
               })}
             </div>
           </div>
@@ -986,7 +997,7 @@ export default function App() {
           <>
             <div style={{ borderTop: "2px solid #1a5c33", margin: "10px 0" }} />
             <div style={{ display: "flex", justifyContent: "center" }}>
-              <PositionSlot ids={[gk]} label="Målvakt" periodIdx={periodIdx} activeSegmentIdx={0} />
+              <PositionSlot ids={[gk]} label="Målvakt" periodIdx={periodIdx} selectedSegmentIdx={0} />
             </div>
           </>
         )}
@@ -999,15 +1010,17 @@ export default function App() {
      for any of the contiguous segments. The active segment's chip is at full
      opacity; the others dim to 0.35 so the coach can see who's currently on
      and who comes in at the next switch. */
-  const PositionSlot = ({ ids, label, periodIdx, activeSegmentIdx }) => {
+  /* Renders the slot's player for the selected segment, plus — when the next
+     segment swaps in a different player — a small "incoming" chip below.
+     The outgoing player gets a red border + red-tinted bg, the incoming gets
+     a green border + green-tinted bg. So at a glance the coach knows who's
+     about to leave and who's coming on. */
+  const PositionSlot = ({ ids, label, periodIdx, selectedSegmentIdx }) => {
     const isGKLabel = label === "Målvakt";
-    /* Collapse adjacent duplicate IDs into runs. */
-    const groups = [];
-    ids.forEach((id, k) => {
-      const last = groups[groups.length - 1];
-      if (last && last.id === id) last.segs.push(k);
-      else groups.push({ id, segs: [k] });
-    });
+    const curId = ids[selectedSegmentIdx] ?? null;
+    const nextIdx = selectedSegmentIdx + 1;
+    const nextId = nextIdx < ids.length ? (ids[nextIdx] ?? null) : null;
+    const hasNextSwitch = nextId != null && nextId !== curId;
     return (
       <div style={{ textAlign: "center", flex: "1 1 80px", minWidth: 75, maxWidth: 110, overflow: "hidden" }}>
         {label && (
@@ -1015,27 +1028,16 @@ export default function App() {
             {label}
           </div>
         )}
-        {groups.map((g, idx) => {
-          const player = g.id ? getP(g.id) : null;
-          if (player && player.enabled === false) return null;
-          const isActive = g.segs.includes(activeSegmentIdx);
-          if (!g.id) {
-            return idx === 0 ? (
-              <div key={idx} style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 8px", fontSize: 12, color: "#334155", opacity: isActive ? 1 : 0.35 }}>—</div>
-            ) : null;
-          }
-          return (
-            <div key={idx} style={{
-              marginTop: idx === 0 ? 0 : 5,
-              opacity: isActive ? 1 : 0.35,
-              transition: "opacity 0.25s",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-            }}>
-              {idx > 0 && <ArrowUpDown size={10} color="#64748b" style={{ flexShrink: 0 }} />}
-              <Chip id={g.id} inGKSlot={isGKLabel} periodIdx={periodIdx} />
-            </div>
-          );
-        })}
+        {curId
+          ? <Chip id={curId} inGKSlot={isGKLabel} periodIdx={periodIdx} flavor={hasNextSwitch ? "out" : undefined} />
+          : <div style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 8px", fontSize: 12, color: "#334155" }}>—</div>
+        }
+        {hasNextSwitch && (
+          <div style={{ marginTop: 5, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+            <ArrowUpDown size={10} color="#64748b" style={{ flexShrink: 0 }} />
+            <Chip id={nextId} inGKSlot={isGKLabel} periodIdx={periodIdx} flavor="in" />
+          </div>
+        )}
       </div>
     );
   };
@@ -1310,7 +1312,7 @@ export default function App() {
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                   {FORMATS.map(f => (
                     <button key={f.key}
-                      onClick={() => setSettings(s => ({ ...s, format: f.key, formation: defaultFormationName(f.key) }))}
+                      onClick={() => setSettings(s => ({ ...s, format: f.key, formation: defaultFormationName(f.key), duration: FORMAT_DEFAULT_DURATION[f.key] ?? s.duration }))}
                       style={{
                         ...S.btn(settings.format === f.key ? "primary" : "secondary"),
                         padding: "5px 12px", fontSize: 13,
@@ -1469,35 +1471,6 @@ export default function App() {
               const timeColor   = isOvertime ? "#f87171" : isSwitchDue ? "#fb923c" : "#e2e8f0";
               const clampedPeriod = Math.min(timerPeriod, plan.length - 1);
 
-              /* Upcoming swaps for the active period — used to power the
-                 "Nästa byte om M:SS" panel so the coach can see who comes
-                 on and to which position before the boundary is reached. */
-              const activePeriod = plan[clampedPeriod];
-              const currentSeg = segCount > 1 && !isOvertime
-                ? Math.min(segCount - 1, Math.floor(timerElapsed / segSecs))
-                : 0;
-              const nextSeg = currentSeg + 1;
-              const upcoming = (() => {
-                if (segCount <= 1 || isOvertime || nextSeg >= segCount) return null;
-                const cur = activePeriod.lineups[currentSeg];
-                const nxt = activePeriod.lineups[nextSeg];
-                if (!cur || !nxt) return null;
-                const swaps = [];
-                const collect = (curArr, nxtArr, label) => {
-                  for (let j = 0; j < curArr.length; j++) {
-                    const outId = curArr[j];
-                    const inId = nxtArr?.[j];
-                    if (outId !== inId) swaps.push({ outId, inId, label: `${label} ${j + 1}` });
-                  }
-                };
-                collect(cur.att, nxt.att, "Anfall");
-                collect(cur.mid ?? [], nxt.mid ?? [], "Mitt");
-                collect(cur.def, nxt.def, "Försvar");
-                if (swaps.length === 0) return null;
-                const secsToNext = Math.max(0, Math.ceil(nextSeg * segSecs - timerElapsed));
-                return { swaps, secsToNext };
-              })();
-
               const goPrev = () => { setTimerPeriod(p => Math.max(0, p - 1)); seekTimer(0); };
               const goNext = () => { setTimerPeriod(p => Math.min(plan.length - 1, p + 1)); seekTimer(0); setTimerRunning(true); };
               const reset  = () => { setTimerRunning(false); setTimerElapsed(0); };
@@ -1591,37 +1564,6 @@ export default function App() {
                   {segCount > 1 && (
                     <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", marginBottom: 10, letterSpacing: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}>
                       <ArrowUpDown size={12} /> byte var {(settings.duration / segCount).toFixed(settings.duration % segCount === 0 ? 0 : 1)} min
-                    </div>
-                  )}
-
-                  {/* Upcoming swap preview */}
-                  {upcoming && !inSwitchWindow && (
-                    <div style={{
-                      background: "#0f172a", border: "1px solid #334155", borderRadius: 8,
-                      padding: "8px 12px", marginBottom: 10,
-                    }}>
-                      <div style={{
-                        fontSize: 11, color: "#fb923c", letterSpacing: 2, textTransform: "uppercase",
-                        fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 6, justifyContent: "center",
-                      }}>
-                        <ArrowUpDown size={11} /> Nästa byte om {fmtTime(upcoming.secsToNext)}
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 12, color: "#cbd5e1" }}>
-                        {upcoming.swaps.map((s, idx) => {
-                          const outP = s.outId ? getP(s.outId) : null;
-                          const inP = s.inId ? getP(s.inId) : null;
-                          return (
-                            <div key={idx} style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
-                              <div style={{ color: "#94a3b8", fontWeight: 600, minWidth: 64 }}>{s.label}</div>
-                              <div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                <span style={{ color: outP ? "#f87171" : "#475569" }}>{outP ? displayName(outP) : "—"}</span>
-                                <span style={{ color: "#64748b", margin: "0 6px" }}>→</span>
-                                <span style={{ color: "#4ade80" }}>{inP ? displayName(inP) : "—"}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
                     </div>
                   )}
 
@@ -1719,9 +1661,10 @@ export default function App() {
                 const pSecs = settings.duration * 60;
                 const segCount = period.lineups?.length ?? 1;
                 const segSecs = segCount > 0 ? pSecs / segCount : pSecs;
-                const activeSegmentIdx = i === timerPeriod && segCount > 1
+                const liveSeg = i === timerPeriod && segCount > 1
                   ? Math.min(segCount - 1, Math.max(0, Math.floor(timerElapsed / segSecs)))
                   : 0;
+                const selectedSegmentIdx = previewSegments[i] ?? liveSeg;
                 const hasBench = period.bench.length > 0;
                 return (
                 <div key={i}>
@@ -1759,9 +1702,38 @@ export default function App() {
                           Period {i + 1}
                         </div>
                       </div>
-                      <div style={{ fontSize: 12, color: "#4ade80", opacity: 0.7 }}>
-                        {settings.format} &nbsp;·&nbsp; {settings.duration} min
-                      </div>
+                      {segCount > 1 ? (
+                        <div style={{ display: "flex", gap: 4 }}>
+                          {Array.from({ length: segCount }, (_, k) => {
+                            const active = selectedSegmentIdx === k;
+                            const isLive = i === timerPeriod && liveSeg === k;
+                            return (
+                              <button key={k}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setPreviewSeg(i, k);
+                                  if (collapsedPeriods.has(i)) togglePeriod(i);
+                                }}
+                                title={isLive ? "Spelas just nu" : `Visa segment ${k + 1}`}
+                                style={{
+                                  background: active ? "#4ade80" : "#0d3821",
+                                  color: active ? "#0a2e1a" : "#4ade80",
+                                  border: `1px solid ${active ? "#4ade80" : "#1a5c33"}`,
+                                  borderRadius: 6, padding: "3px 9px", fontSize: 12, fontWeight: 700,
+                                  cursor: "pointer", minWidth: 26,
+                                  position: "relative",
+                                }}>
+                                {k + 1}
+                                {isLive && !active && <span style={{ position: "absolute", top: 1, right: 2, width: 5, height: 5, borderRadius: "50%", background: "#fb923c" }} />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: 12, color: "#4ade80", opacity: 0.7 }}>
+                          {settings.format} &nbsp;·&nbsp; {settings.duration} min
+                        </div>
+                      )}
                     </div>
 
                     {!collapsedPeriods.has(i) && (
@@ -1770,7 +1742,7 @@ export default function App() {
                           <Pitch
                             lineups={period.lineups}
                             gk={period.gk} periodIdx={i}
-                            activeSegmentIdx={activeSegmentIdx}
+                            selectedSegmentIdx={selectedSegmentIdx}
                           />
                         </div>
                         {hasBench && (
