@@ -154,17 +154,6 @@ function generatePlan(players, settings) {
      slots. When false, every segment runs fillPositions independently. */
   const keepPositionsInPeriod = settings.keepPositionsInPeriod !== false;
 
-  const gks = fmt.hasGK ? players.filter(p => p.isGK) : [];
-  /* Total minutes per player — used for display only. */
-  const mins = Object.fromEntries(players.map(p => [p.id, 0]));
-  /* Outfield-only minutes — drives the avail/segment sort. Splitting it from
-     total mins is what stops a GK who already played their goalkeeper period
-     from being pushed to the bottom of the outfield rotation by their GK time. */
-  const outfieldMins = Object.fromEntries(players.map(p => [p.id, 0]));
-  /* posMins tracks cumulative minutes each player has played at each outfield
-     position, so the assignment can pull them toward their least-played role. */
-  const posMins = Object.fromEntries(players.map(p => [p.id, { att: 0, mid: 0, def: 0 }]));
-
   /* Deterministic pseudo-random in [0,1) keyed by a string. Used as a small
      tiebreaker so equal-score candidates don't collapse to array order, and
      so the shuffle button can produce a different valid distribution. */
@@ -176,6 +165,23 @@ function generatePlan(players, settings) {
     }
     return (h >>> 0) / 4294967296;
   };
+
+  /* GK rotation order is shuffleSalt-keyed so the Slumpa button rotates
+     who plays in which period, not just the outfield positions. With a
+     single GK marked there's nothing to shuffle. */
+  const gks = fmt.hasGK
+    ? players.filter(p => p.isGK).slice().sort((a, b) =>
+        hash01(`gks|${a.id}|${shuffleSalt}`) - hash01(`gks|${b.id}|${shuffleSalt}`))
+    : [];
+  /* Total minutes per player — used for display only. */
+  const mins = Object.fromEntries(players.map(p => [p.id, 0]));
+  /* Outfield-only minutes — drives the avail/segment sort. Splitting it from
+     total mins is what stops a GK who already played their goalkeeper period
+     from being pushed to the bottom of the outfield rotation by their GK time. */
+  const outfieldMins = Object.fromEntries(players.map(p => [p.id, 0]));
+  /* posMins tracks cumulative minutes each player has played at each outfield
+     position, so the assignment can pull them toward their least-played role. */
+  const posMins = Object.fromEntries(players.map(p => [p.id, { att: 0, mid: 0, def: 0 }]));
 
   const prefRole = { attack: "att", defense: "def", neutral: "mid" };
   const PREF_BONUS = FULL * 0.5;   // preference is worth ~half a period of imbalance
