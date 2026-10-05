@@ -461,6 +461,28 @@ export default function App() {
      fires on forward moves (goNext / natural advance); going back leaves
      periods expanded so the coach can review. */
   const prevTimerPeriodRef = useRef(timerPeriod);
+  /* Keep "no active input" state most of the time so iOS Shake-to-Undo
+     has no responder to prompt an undo for. Blur the focused element
+     whenever the user taps anywhere outside an input, and on tab switch. */
+  useEffect(() => {
+    const blurOnOutsideTouch = (e) => {
+      if (!(e.target.closest && e.target.closest("input, textarea, select, [contenteditable='true']"))) {
+        const a = document.activeElement;
+        if (a && a !== document.body && typeof a.blur === "function") a.blur();
+      }
+    };
+    document.addEventListener("touchstart", blurOnOutsideTouch, { passive: true });
+    document.addEventListener("mousedown", blurOnOutsideTouch);
+    return () => {
+      document.removeEventListener("touchstart", blurOnOutsideTouch);
+      document.removeEventListener("mousedown", blurOnOutsideTouch);
+    };
+  }, []);
+  useEffect(() => {
+    const a = document.activeElement;
+    if (a && a !== document.body && typeof a.blur === "function") a.blur();
+  }, [tab]);
+
   useEffect(() => {
     if (timerPeriod > prevTimerPeriodRef.current) {
       const leaving = prevTimerPeriodRef.current;
