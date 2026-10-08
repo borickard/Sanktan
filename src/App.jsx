@@ -1765,33 +1765,45 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Scoreboard — two side-by-side team cards (Bold style) */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-                    <div style={{ background: "#ffffff", border: "2px solid #0a0a0a", borderRadius: 10, padding: "9px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontSize: 11, color: "#0a0a0a", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {homeTeam || "Hemmalag"}
+                  {/* Scoreboard — two side-by-side team cards (Bold style),
+                      sized up on desktop so the score reads at a glance. */}
+                  {(() => {
+                    const scoreSize   = isDesktop ? 56 : 28;
+                    const labelSize   = isDesktop ? 14 : 11;
+                    const btnSize     = isDesktop ? 36 : 24;
+                    const btnFontSize = isDesktop ? 22 : 15;
+                    const padV        = isDesktop ? 14 : 9;
+                    const padH        = isDesktop ? 18 : 12;
+                    const btnGap      = isDesktop ? 10 : 6;
+                    return (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: isDesktop ? 12 : 8, marginBottom: 16 }}>
+                        <div style={{ background: "#ffffff", border: "2px solid #0a0a0a", borderRadius: 12, padding: `${padV}px ${padH}px`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: labelSize, color: "#0a0a0a", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {homeTeam || "Hemmalag"}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: btnGap, marginTop: isDesktop ? 8 : 2 }}>
+                              <button onClick={() => setHomeScore(s => Math.max(0, s - 1))} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: btnSize, height: btnSize, cursor: "pointer", fontSize: btnFontSize, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
+                              <button onClick={() => setHomeScore(s => s + 1)} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: btnSize, height: btnSize, cursor: "pointer", fontSize: btnFontSize, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
+                            </div>
+                          </div>
+                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: scoreSize, lineHeight: 1, color: "#0a0a0a", flexShrink: 0, letterSpacing: "-0.03em" }}>{homeScore}</div>
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-                          <button onClick={() => setHomeScore(s => Math.max(0, s - 1))} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 6, width: 24, height: 24, cursor: "pointer", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
-                          <button onClick={() => setHomeScore(s => s + 1)} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 6, width: 24, height: 24, cursor: "pointer", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
+                        <div style={{ background: "#0a0a0a", color: "#ffffff", borderRadius: 12, padding: `${padV}px ${padH}px`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: scoreSize, lineHeight: 1, color: "#ffffff", flexShrink: 0, letterSpacing: "-0.03em" }}>{awayScore}</div>
+                          <div style={{ minWidth: 0, flex: 1, textAlign: "right" }}>
+                            <div style={{ fontSize: labelSize, color: "#ffffff", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {awayTeam || "Bortalag"}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: btnGap, marginTop: isDesktop ? 8 : 2, justifyContent: "flex-end" }}>
+                              <button onClick={() => setAwayScore(s => Math.max(0, s - 1))} style={{ background: "#262626", border: "1.5px solid #ffffff", color: "#ffffff", borderRadius: 7, width: btnSize, height: btnSize, cursor: "pointer", fontSize: btnFontSize, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
+                              <button onClick={() => setAwayScore(s => s + 1)} style={{ background: "#262626", border: "1.5px solid #ffffff", color: "#ffffff", borderRadius: 7, width: btnSize, height: btnSize, cursor: "pointer", fontSize: btnFontSize, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 28, lineHeight: 1, color: "#0a0a0a", flexShrink: 0 }}>{homeScore}</div>
-                    </div>
-                    <div style={{ background: "#0a0a0a", color: "#ffffff", borderRadius: 10, padding: "9px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 28, lineHeight: 1, color: "#ffffff", flexShrink: 0 }}>{awayScore}</div>
-                      <div style={{ minWidth: 0, flex: 1, textAlign: "right" }}>
-                        <div style={{ fontSize: 11, color: "#ffffff", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {awayTeam || "Bortalag"}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, justifyContent: "flex-end" }}>
-                          <button onClick={() => setAwayScore(s => Math.max(0, s - 1))} style={{ background: "#262626", border: "1.5px solid #ffffff", color: "#ffffff", borderRadius: 6, width: 24, height: 24, cursor: "pointer", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
-                          <button onClick={() => setAwayScore(s => s + 1)} style={{ background: "#262626", border: "1.5px solid #ffffff", color: "#ffffff", borderRadius: 6, width: 24, height: 24, cursor: "pointer", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </>
               );
             })()}
