@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Zap, Shuffle, Shield,
+  Sword, Swords, Shield, Shuffle,
   Play, Pause, RotateCcw, RefreshCw, SkipBack, SkipForward,
   ArrowUpDown, AlertTriangle, Link2, X, Check,
   Users, ClipboardList, Pencil, ChevronRight, ChevronUp, ChevronDown,
@@ -17,9 +17,9 @@ const bumpUid = (players) => {
 
 /* ─── Constants ─── */
 const PREFS = [
-  { key: "attack",  label: "Anfall",   Icon: Zap,     color: "#ef4444" },
-  { key: "neutral", label: "Mix",      Icon: Shuffle, color: "#f97316" },
-  { key: "defense", label: "Defensiv", Icon: Shield,  color: "#facc15" },
+  { key: "attack",  label: "Anfall",   Icon: Sword,  color: "#ef4444" },
+  { key: "neutral", label: "Mix",      Icon: Swords, color: "#f97316" },
+  { key: "defense", label: "Defensiv", Icon: Shield, color: "#facc15" },
 ];
 const GK_COLOR = "#22c55e";
 const PM = Object.fromEntries(PREFS.map(p => [p.key, p]));
@@ -1717,29 +1717,49 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Controls */}
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={reset}
-                      style={{ ...S.btn("secondary"), padding: "9px 11px" }}>
-                      <RotateCcw size={15} />
-                    </button>
-                    <button onClick={() => seekTimer(timerElapsed - 15)}
-                      style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 12, fontWeight: 700 }}>−15s</button>
-                    <button onClick={() => setTimerRunning(r => !r)}
-                      style={{ ...S.btn("primary"), flex: 2, padding: "9px 0", fontSize: 14 }}>
-                      {timerRunning ? <><Pause size={14} /> Pausa</> : <><Play size={14} /> {timerElapsed > 0 ? "Fortsätt" : "Starta"}</>}
-                    </button>
-                    <button onClick={() => seekTimer(timerElapsed + 15)}
-                      style={{ ...S.btn("secondary"), flex: 1, padding: "9px 0", fontSize: 12, fontWeight: 700 }}>+15s</button>
-                    <button onClick={goPrev} disabled={timerPeriod === 0}
-                      style={{ ...S.btn("secondary"), padding: "9px 11px", opacity: timerPeriod === 0 ? 0.35 : 1 }}>
-                      <SkipBack size={15} />
-                    </button>
-                    <button onClick={goNext} disabled={timerPeriod >= plan.length - 1}
-                      style={{ ...S.btn("secondary"), padding: "9px 11px", opacity: timerPeriod >= plan.length - 1 ? 0.35 : 1 }}>
-                      <SkipForward size={15} />
-                    </button>
-                  </div>
+                  {/* Controls — dim overlay buttons on the yellow timer, with the
+                      play/pause button inverted (black bg, yellow icon) so it reads
+                      as the primary action. */}
+                  {(() => {
+                    const dimBtn = {
+                      background: "rgba(10,10,10,0.1)", color: "#0a0a0a",
+                      border: "none", borderRadius: 8, cursor: "pointer",
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      fontFamily: "'Space Grotesk', system-ui, sans-serif",
+                      fontWeight: 700, letterSpacing: "-0.005em",
+                    };
+                    const primBtn = {
+                      background: "#0a0a0a", color: "#facc15",
+                      border: "none", borderRadius: 8, cursor: "pointer",
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      fontFamily: "'Space Grotesk', system-ui, sans-serif",
+                      fontWeight: 700, letterSpacing: "-0.005em",
+                    };
+                    return (
+                      <div style={{ display: "flex", gap: 5 }}>
+                        <button onClick={reset} title="Nollställ"
+                          style={{ ...dimBtn, padding: "9px 11px" }}>
+                          <RotateCcw size={15} />
+                        </button>
+                        <button onClick={() => seekTimer(timerElapsed - 15)}
+                          style={{ ...dimBtn, flex: 1, padding: "9px 0", fontSize: 12 }}>−15s</button>
+                        <button onClick={() => setTimerRunning(r => !r)}
+                          style={{ ...primBtn, flex: 2, padding: "9px 0", fontSize: 14, gap: 5 }}>
+                          {timerRunning ? <><Pause size={14} /> Pausa</> : <><Play size={14} /> {timerElapsed > 0 ? "Fortsätt" : "Starta"}</>}
+                        </button>
+                        <button onClick={() => seekTimer(timerElapsed + 15)}
+                          style={{ ...dimBtn, flex: 1, padding: "9px 0", fontSize: 12 }}>+15s</button>
+                        <button onClick={goPrev} disabled={timerPeriod === 0} title="Föregående period"
+                          style={{ ...dimBtn, padding: "9px 11px", opacity: timerPeriod === 0 ? 0.35 : 1, cursor: timerPeriod === 0 ? "default" : "pointer" }}>
+                          <SkipBack size={15} />
+                        </button>
+                        <button onClick={goNext} disabled={timerPeriod >= plan.length - 1} title="Nästa period"
+                          style={{ ...dimBtn, padding: "9px 11px", opacity: timerPeriod >= plan.length - 1 ? 0.35 : 1, cursor: timerPeriod >= plan.length - 1 ? "default" : "pointer" }}>
+                          <SkipForward size={15} />
+                        </button>
+                      </div>
+                    );
+                  })()}
 
                   </div>
                     </div>
@@ -1968,8 +1988,8 @@ export default function App() {
                   const ps = posStats[p.id] ?? {};
                   const posBadges = [
                     ps.gk    > 0 && { key: "gk",    label: "MV",   Icon: null,    count: ps.gk,    bg: "#22c55e26", color: GK_COLOR },
-                    ps.att   > 0 && { key: "att",   label: null,   Icon: Zap,     count: ps.att,   bg: "#ef444426", color: "#ef4444" },
-                    ps.mid   > 0 && { key: "mid",   label: null,   Icon: Shuffle, count: ps.mid,   bg: "#f9731626", color: "#f97316" },
+                    ps.att   > 0 && { key: "att",   label: null,   Icon: Sword,  count: ps.att,   bg: "#ef444426", color: "#ef4444" },
+                    ps.mid   > 0 && { key: "mid",   label: null,   Icon: Swords, count: ps.mid,   bg: "#f9731626", color: "#f97316" },
                     ps.def   > 0 && { key: "def",   label: null,   Icon: Shield,  count: ps.def,   bg: "#facc1526", color: "#facc15" },
                     ps.bench > 0 && { key: "bench", label: "Bänk", Icon: null,    count: ps.bench, bg: "#ffffff",   color: "#525252" },
                   ].filter(Boolean);
