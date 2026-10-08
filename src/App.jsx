@@ -845,11 +845,11 @@ export default function App() {
     <button onClick={copyShareUrl}
       style={{
         width: "100%", padding: "10px 12px",
-        background: shareCopied ? "#22c55e" : "#1e293b",
-        border: `1px solid ${shareCopied ? "#22c55e" : "#334155"}`,
+        background: shareCopied ? "#22c55e" : "#ffffff",
+        border: `1.5px solid ${shareCopied ? "#22c55e" : "#0a0a0a"}`,
         borderRadius: 9,
-        color: shareCopied ? "#fff" : "#94a3b8",
-        fontSize: 13, fontFamily: "'DM Sans', system-ui, sans-serif", cursor: "pointer",
+        color: shareCopied ? "#fff" : "#737373",
+        fontSize: 13, fontFamily: "'Space Grotesk', system-ui, sans-serif", cursor: "pointer",
         display: "flex", alignItems: "center", gap: 8, textAlign: "left",
         ...extraStyle,
       }}>
@@ -887,7 +887,7 @@ export default function App() {
         {shareOpen ? <><X size={13} /> Stäng dela</> : <><Link2 size={13} /> Dela länk</>}
       </button>
       {shareOpen && (
-        <div style={{ marginTop: 6, background: "#1e293b", border: "1px solid #334155", borderRadius: 9, padding: "10px 12px" }}>
+        <div style={{ marginTop: 6, background: "#ffffff", border: "1.5px solid #0a0a0a", borderRadius: 9, padding: "10px 12px" }}>
           <div style={{ fontSize: 11, color: "#475569", marginBottom: 8 }}>
             Länken uppdateras automatiskt — kopiera och skicka den till någon annan.
           </div>
@@ -897,8 +897,8 @@ export default function App() {
               value={window.location.href}
               onFocus={e => e.target.select()}
               style={{
-                flex: 1, minWidth: 0, background: "#0f172a", border: "1px solid #334155",
-                color: "#94a3b8", borderRadius: 7, padding: "8px 10px", fontSize: 12, outline: "none",
+                flex: 1, minWidth: 0, background: "#ffffff", border: "1.5px solid #0a0a0a",
+                color: "#737373", borderRadius: 7, padding: "8px 10px", fontSize: 12, outline: "none",
               }}
             />
             <button onClick={copyLink} style={{
@@ -981,8 +981,9 @@ export default function App() {
     const isSel2nd = sel && sel.id !== id;
     const activeGK = p.isGK && inGKSlot;
     /* flavor "out" = leaves at next switch, "in" = comes on at next switch. */
-    const flavorBg     = flavor === "out" ? "#3f1818" : flavor === "in" ? "#0f2a1c" : null;
-    const flavorBorder = flavor === "out" ? "#ef4444" : flavor === "in" ? "#22c55e" : null;
+    const flavorBg     = flavor === "out" ? "#fee2e2" : flavor === "in" ? "#22c55e" : null;
+    const flavorBorder = flavor === "out" ? "#ef4444" : flavor === "in" ? "#15803d" : null;
+    const flavorColor  = flavor === "out" ? "#991b1b" : flavor === "in" ? "#ffffff" : "#0a0a0a";
 
     return (
       <div
@@ -990,25 +991,28 @@ export default function App() {
         style={{
           display: "inline-flex", alignItems: "center", gap: 4,
           maxWidth: "100%", overflow: "hidden",
-          background: isSelected ? "#fef08a" : (flavorBg ?? "#0f172a"),
-          color: isSelected ? "#0f172a" : "#e2e8f0",
-          border: `2px solid ${isSelected ? "#fbbf24" : activeGK ? GK_COLOR : (flavorBorder ?? "#334155")}`,
-          borderRadius: 8,
-          padding: small ? "3px 7px" : "4px 8px",
+          background: isSelected ? "#facc15" : (flavorBg ?? "#ffffff"),
+          color: isSelected ? "#0a0a0a" : flavorColor,
+          border: `1.5px solid ${isSelected ? "#0a0a0a" : activeGK ? GK_COLOR : (flavorBorder ?? "#0a0a0a")}`,
+          borderRadius: 999,
+          padding: small ? "3px 10px" : "5px 11px",
           fontSize: small ? 12 : 13,
-          fontWeight: 600,
+          fontWeight: flavor === "in" ? 700 : 600,
+          textDecoration: flavor === "out" ? "line-through" : "none",
+          textDecorationColor: flavor === "out" ? "#dc2626" : undefined,
+          textDecorationThickness: flavor === "out" ? "2px" : undefined,
           cursor: "pointer",
           transition: "all 0.15s",
           userSelect: "none", WebkitUserSelect: "none",
           opacity: isSel2nd ? 0.75 : 1,
-          boxShadow: isSelected ? "0 0 0 3px rgba(251,191,36,0.3)" : "none",
+          boxShadow: isSelected ? "0 0 0 3px rgba(250,204,21,0.35)" : "none",
         }}
       >
         {activeGK && (
-          <span style={{ fontSize: 11, background: GK_COLOR, color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
+          <span style={{ fontSize: 11, background: GK_COLOR, color: "#ffffff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
         )}
         {p.isGK && !inGKSlot && (
-          <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>mv</span>
+          <span style={{ fontSize: 10, color: flavor === "in" ? "#ffffff" : flavor === "out" ? "#991b1b" : "#737373", fontWeight: 500, opacity: flavor === "out" ? 0.75 : 1 }}>mv</span>
         )}
         <span style={{
           overflow: "hidden",
@@ -1020,36 +1024,42 @@ export default function App() {
     );
   };
 
-  /* A horizontal pitch row with a rotated zone label on the left edge.
-     Saves the vertical space the old "ANFALLSZON / MITTFÄLT / FÖRSVARSZON"
-     headers (plus per-slot Anfall 1 / Mitt 2 / … labels) used to take. */
-  const ZoneRow = ({ label, color, children }) => (
-    <div style={{ display: "flex", alignItems: "stretch", marginBottom: 14 }}>
+  /* Horizontal zone row with a short label on the left, a colored strip,
+     and a subtle tint background. The strip + label text + bg tint lets you
+     tell ANF / MF / FÖR apart at a glance. */
+  const ZONE_STYLE = {
+    "Anfall":   { bg: "#fff7ed", strip: "#ea580c", color: "#9a3412", short: "ANF" },
+    "Mittfält": { bg: "#faf5ff", strip: "#9333ea", color: "#6b21a8", short: "MF"  },
+    "Försvar":  { bg: "#eff6ff", strip: "#2563eb", color: "#1e3a8a", short: "FÖR" },
+  };
+  const ZoneRow = ({ label, children }) => {
+    const z = ZONE_STYLE[label] ?? { bg: "#fafafa", strip: "#d4d4d4", color: "#525252", short: label };
+    return (
       <div style={{
-        writingMode: "vertical-rl",
-        transform: "rotate(180deg)",
-        fontSize: 10,
-        color,
-        fontWeight: 700,
-        letterSpacing: 2,
-        textTransform: "uppercase",
-        padding: "4px 2px",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0,
-        opacity: 0.8,
+        display: "flex", alignItems: "stretch", marginBottom: 8,
+        background: z.bg, borderLeft: `4px solid ${z.strip}`, borderRadius: 8,
+        padding: "8px 6px 8px 8px",
       }}>
-        {label}
+        <div style={{
+          fontFamily: "'Space Grotesk', system-ui, sans-serif",
+          fontSize: 11, color: z.color, fontWeight: 700,
+          letterSpacing: "0.06em",
+          padding: "2px 6px 0 0",
+          minWidth: 36,
+          flexShrink: 0,
+        }}>
+          {z.short}
+        </div>
+        <div style={{
+          flex: 1, minWidth: 0,
+          display: "flex", flexWrap: "wrap", justifyContent: "center",
+          gap: 6, rowGap: 6, alignItems: "flex-start",
+        }}>
+          {children}
+        </div>
       </div>
-      <div style={{
-        flex: 1, minWidth: 0,
-        display: "flex", flexWrap: "wrap", justifyContent: "center",
-        gap: 8, rowGap: 10, alignItems: "flex-start",
-        paddingLeft: 4,
-      }}>
-        {children}
-      </div>
-    </div>
-  );
+    );
+  };
 
   const Pitch = ({ lineups, gk, periodIdx, selectedSegmentIdx, prevSegmentIdx }) => {
     const showPositions = settings.positions !== false;
@@ -1062,28 +1072,27 @@ export default function App() {
     const slotIds = (role, j) => Array.from({ length: segCount }, (_, k) => (lineups[k][role] ?? [])[j] ?? null);
     return (
       <div style={{
-        background: "linear-gradient(180deg, #0a1f12 0%, #0d2818 50%, #0a1f12 100%)",
-        padding: "12px 12px 10px", position: "relative",
+        background: "#ffffff",
+        padding: "10px 10px 8px", position: "relative",
       }}>
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(180deg, transparent 0px, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px)", pointerEvents: "none" }} />
         {showPositions ? (
           <>
-            <ZoneRow label="Anfall" color="#ef4444">
+            <ZoneRow label="Anfall">
               {att.map((_, j) => <PositionSlot key={j} ids={slotIds("att", j)} label="" periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
             </ZoneRow>
             {fmt.mid > 0 && (
-              <ZoneRow label="Mittfält" color="#f97316">
+              <ZoneRow label="Mittfält">
                 {mid.map((_, j) => <PositionSlot key={j} ids={slotIds("mid", j)} label="" periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
               </ZoneRow>
             )}
-            <ZoneRow label="Försvar" color="#facc15">
+            <ZoneRow label="Försvar">
               {def.map((_, j) => <PositionSlot key={j} ids={slotIds("def", j)} label="" periodIdx={periodIdx} selectedSegmentIdx={selectedSegmentIdx} prevSegmentIdx={prevSegmentIdx} />)}
             </ZoneRow>
           </>
         ) : (
           <div style={{ padding: "4px 0 8px" }}>
-            <div style={{ fontSize: 11, color: "#4ade80", textTransform: "uppercase", letterSpacing: 2, textAlign: "center", marginBottom: 10, fontWeight: 600, opacity: 0.8 }}>På plan</div>
-            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 10, alignItems: "flex-start" }}>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#525252", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "center", marginBottom: 10, fontWeight: 700 }}>På plan</div>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6, alignItems: "flex-start" }}>
               {[...att, ...mid, ...def].map((_, j) => {
                 const idsAcross = Array.from({ length: segCount }, (_, k) => {
                   const seg = lineups[k];
@@ -1097,9 +1106,16 @@ export default function App() {
         )}
         {fmt.hasGK && (
           <>
-            <div style={{ borderTop: "2px solid #1a5c33", margin: "10px 0" }} />
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <PositionSlot ids={[gk]} label="Målvakt" periodIdx={periodIdx} selectedSegmentIdx={0} />
+            <div style={{ borderTop: "2px dashed #0a0a0a", margin: "10px 0 8px" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 2px" }}>
+              <div style={{
+                fontFamily: "'Space Grotesk', system-ui, sans-serif",
+                fontSize: 11, color: "#525252", fontWeight: 700,
+                letterSpacing: "0.06em", minWidth: 36, flexShrink: 0,
+              }}>MV</div>
+              <div style={{ display: "flex", gap: 6, flex: 1 }}>
+                <PositionSlot ids={[gk]} label="" periodIdx={periodIdx} selectedSegmentIdx={0} isGKSlot />
+              </div>
             </div>
           </>
         )}
@@ -1119,25 +1135,25 @@ export default function App() {
      border/tint = "just left". Outside the switch window prevSegmentIdx is
      null and we just show the selected segment's chip plainly, so previewing
      other segments via the header tabs reads as a clean lineup. */
-  const PositionSlot = ({ ids, label, periodIdx, selectedSegmentIdx, prevSegmentIdx }) => {
-    const isGKLabel = label === "Målvakt";
+  const PositionSlot = ({ ids, label, periodIdx, selectedSegmentIdx, prevSegmentIdx, isGKSlot }) => {
+    const isGKLabel = isGKSlot || label === "Målvakt";
     const curId = ids[selectedSegmentIdx] ?? null;
     const prevId = prevSegmentIdx != null ? (ids[prevSegmentIdx] ?? null) : null;
     const justChanged = prevId != null && prevId !== curId;
     return (
-      <div style={{ textAlign: "center", flex: "1 1 90px", minWidth: 75, maxWidth: 160, overflow: "hidden" }}>
+      <div style={{ textAlign: "center", flex: "1 1 90px", minWidth: 75, maxWidth: 180, overflow: "hidden" }}>
         {label && (
-          <div style={{ fontSize: 11, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5, fontWeight: 600 }}>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#525252", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5, fontWeight: 700 }}>
             {label}
           </div>
         )}
         {curId
           ? <Chip id={curId} inGKSlot={isGKLabel} periodIdx={periodIdx} flavor={justChanged ? "in" : undefined} />
-          : <div style={{ background: "#0f172a", border: "1px dashed #1e3a28", borderRadius: 8, padding: "5px 8px", fontSize: 12, color: "#334155" }}>—</div>
+          : <div style={{ background: "#ffffff", border: "1.5px dashed #0a0a0a", borderRadius: 999, padding: "3px 10px", fontSize: 12, color: "#a3a3a3", display: "inline-block" }}>—</div>
         }
         {justChanged && prevId && (
           <div style={{ marginTop: 5, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-            <ArrowUpDown size={10} color="#64748b" style={{ flexShrink: 0 }} />
+            <ArrowUpDown size={10} color="#525252" style={{ flexShrink: 0 }} />
             <Chip id={prevId} inGKSlot={isGKLabel} periodIdx={periodIdx} flavor="out" />
           </div>
         )}
@@ -1147,32 +1163,36 @@ export default function App() {
 
   /* ─── Styles ─── */
   const S = {
-    app:   { fontFamily: "'DM Sans', system-ui, sans-serif", background: "#0f172a", minHeight: "100vh", color: "#e2e8f0", fontSize: 14 },
-    header: { background: "linear-gradient(135deg, #0a1929 0%, #0d2137 100%)", padding: "16px 20px", borderBottom: "1px solid #1e3a5f" },
-    tabs:  { background: "#0d1f33", display: "flex", padding: "0 20px", borderBottom: "1px solid #1e3a5f" },
+    app:   { fontFamily: "'Space Grotesk', system-ui, sans-serif", background: "#ffffff", minHeight: "100vh", color: "#0a0a0a", fontSize: 14 },
+    header: { background: "#ffffff", padding: "14px 20px", borderBottom: "2px solid #0a0a0a" },
+    tabs:  { background: "#ffffff", display: "flex", padding: "0 20px", borderBottom: "2px solid #0a0a0a" },
     tab:   active => ({
       padding: "11px 18px", background: "none", border: "none", cursor: "pointer",
-      color: active ? "#84cc16" : "#64748b",
-      borderBottom: `2px solid ${active ? "#84cc16" : "transparent"}`,
-      fontSize: 14, fontWeight: active ? 600 : 400, transition: "all 0.15s",
+      color: active ? "#0a0a0a" : "#737373",
+      borderBottom: `3px solid ${active ? "#facc15" : "transparent"}`,
+      marginBottom: -2,
+      fontSize: 14, fontWeight: active ? 700 : 500, transition: "all 0.15s",
       display: "inline-flex", alignItems: "center", gap: 6,
+      letterSpacing: "-0.01em",
     }),
     body:  { padding: isDesktop ? "24px 32px 60px" : "16px 16px 40px", maxWidth: isDesktop ? 980 : "100%", margin: "0 auto" },
-    card:  { background: "#1e293b", borderRadius: 12, marginBottom: 12, overflow: "hidden" },
+    card:  { background: "#ffffff", border: "2px solid #0a0a0a", borderRadius: 12, marginBottom: 12, overflow: "hidden" },
     btn:   (variant = "primary") => ({
-      border: "none", borderRadius: 9, cursor: "pointer",
-      fontFamily: "'DM Sans', system-ui, sans-serif",
-      fontWeight: 600, transition: "all 0.15s",
+      border: variant === "primary" ? "2px solid #0a0a0a" : "2px solid #0a0a0a",
+      borderRadius: 8, cursor: "pointer",
+      fontFamily: "'Space Grotesk', system-ui, sans-serif",
+      fontWeight: 700, transition: "all 0.15s",
       display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-      ...(variant === "primary"   ? { background: "#84cc16", color: "#0f172a" } : {}),
-      ...(variant === "secondary" ? { background: "#1e293b", color: "#84cc16", border: "1px solid #334155" } : {}),
-      ...(variant === "ghost"     ? { background: "transparent", color: "#94a3b8" } : {}),
+      letterSpacing: "-0.005em",
+      ...(variant === "primary"   ? { background: "#facc15", color: "#0a0a0a" } : {}),
+      ...(variant === "secondary" ? { background: "#ffffff", color: "#0a0a0a" } : {}),
+      ...(variant === "ghost"     ? { background: "transparent", color: "#525252", border: "none" } : {}),
     }),
   };
 
   /* ─── Render ─── */
   if (kvLoading) return (
-    <div style={{ background: "#0f172a", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontFamily: "'DM Sans', system-ui, sans-serif", fontSize: 15 }}>
+    <div style={{ background: "#ffffff", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#525252", fontFamily: "'Space Grotesk', system-ui, sans-serif", fontSize: 15 }}>
       Laddar matchplan…
     </div>
   );
@@ -1182,15 +1202,21 @@ export default function App() {
 
       {/* Header */}
       <div style={S.header}>
-        <div
-          onClick={e => { e.stopPropagation(); resetAll(); }}
-          title="Klicka för att återställa allt"
-          style={{ fontFamily: "'Bebas Neue'", fontSize: "clamp(20px, 7vw, 30px)", letterSpacing: 2, color: "#f8fafc", lineHeight: 1, cursor: "pointer", display: "inline-flex", alignItems: "baseline", gap: 10 }}
-        >
-          Matchplaneraren <span style={{ fontSize: "0.6em", color: "#84cc16", letterSpacing: 2 }}>{settings.format}</span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+          <div
+            onClick={e => { e.stopPropagation(); resetAll(); }}
+            title="Klicka för att återställa allt"
+            style={{ fontSize: "clamp(20px, 6vw, 26px)", color: "#0a0a0a", lineHeight: 1, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 10, fontWeight: 700, letterSpacing: "-0.02em" }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, background: "#0a0a0a", borderRadius: 8 }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="3.5" stroke="#fff" strokeWidth="1.8"/></svg>
+            </span>
+            Speltid
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.55em", color: "#0a0a0a", background: "#facc15", padding: "2px 8px", borderRadius: 4, letterSpacing: "0.04em", fontWeight: 700, border: "1.5px solid #0a0a0a" }}>{settings.format}</span>
+          </div>
         </div>
-        <div style={{ fontSize: 13, color: "#64748b", marginTop: 4, lineHeight: 1.6 }}>
-          {activePlayers.length}/{players.length} sp &nbsp;·&nbsp; {settings.periods}x{settings.duration} min &nbsp;·&nbsp; {settings.subs} byte per period
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#525252", marginTop: 6, lineHeight: 1.6, letterSpacing: "0.02em" }}>
+          {activePlayers.length}/{players.length} sp · {settings.periods}×{settings.duration} min · {settings.subs} byte/period
         </div>
       </div>
 
@@ -1212,7 +1238,7 @@ export default function App() {
         {/* ═══ PLAYERS TAB ═══ */}
         {tab === "players" && (
           <div>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>
+            <div style={{ fontSize: 12, color: "#525252", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>
               Tryck för att redigera · MV = Målvakt
             </div>
 
@@ -1239,7 +1265,7 @@ export default function App() {
                 style={{
                   ...S.card, padding: "10px 12px", display: "flex", alignItems: "center", gap: 6,
                   opacity: dragIdx.current === i ? 0.4 : (p.enabled !== false ? 1 : 0.42),
-                  outline: dragOverIdx === i ? "2px solid #4ade80" : "none",
+                  outline: dragOverIdx === i ? "2px solid #22c55e" : "none",
                   outlineOffset: 2, cursor: "grab",
                 }}>
                 <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }} onClick={e => e.stopPropagation()}>
@@ -1250,7 +1276,7 @@ export default function App() {
                     aria-label="Flytta upp"
                     style={{
                       background: "transparent", border: "none", padding: "4px 2px",
-                      color: i === 0 ? "#334155" : "#64748b",
+                      color: i === 0 ? "#d4d4d4" : "#525252",
                       cursor: i === 0 ? "default" : "pointer", lineHeight: 0,
                     }}>
                     <ChevronUp size={14} />
@@ -1262,7 +1288,7 @@ export default function App() {
                     aria-label="Flytta ner"
                     style={{
                       background: "transparent", border: "none", padding: "4px 2px",
-                      color: i === players.length - 1 ? "#334155" : "#64748b",
+                      color: i === players.length - 1 ? "#d4d4d4" : "#525252",
                       cursor: i === players.length - 1 ? "default" : "pointer", lineHeight: 0,
                     }}>
                     <ChevronDown size={14} />
@@ -1274,7 +1300,7 @@ export default function App() {
                   style={{
                     position: "relative", flexShrink: 0,
                     width: 36, height: 20, borderRadius: 10, padding: 0,
-                    background: p.enabled !== false ? "#84cc16" : "#334155",
+                    background: p.enabled !== false ? "#facc15" : "#d4d4d4",
                     border: "none", cursor: "pointer", transition: "background 0.2s",
                   }}
                 >
@@ -1306,12 +1332,12 @@ export default function App() {
                       if (prev) document.getElementById(`player-name-${prev.id}`)?.focus();
                     }
                   }}
-                  style={{ flex: 1, minWidth: 0, background: "#0f172a", border: "1px solid #334155", borderRadius: 6, color: "#e2e8f0", fontSize: 15, fontWeight: 500, outline: "none", padding: "3px 7px" }}
+                  style={{ flex: 1, minWidth: 0, background: "#ffffff", border: "1.5px solid #0a0a0a", borderRadius: 6, color: "#0a0a0a", fontSize: 15, fontWeight: 500, outline: "none", padding: "3px 7px" }}
                 />
 
                 <button
                   onClick={() => updP(p.id, "isGK", !p.isGK)}
-                  style={{ ...S.btn(p.isGK ? "primary" : "ghost"), padding: "3px 8px", fontSize: 12, borderRadius: 6, border: p.isGK ? "none" : "1px solid #334155" }}>
+                  style={{ ...S.btn(p.isGK ? "primary" : "ghost"), padding: "3px 8px", fontSize: 12, borderRadius: 6, border: p.isGK ? "none" : "1.5px solid #0a0a0a" }}>
                   MV
                 </button>
 
@@ -1322,10 +1348,10 @@ export default function App() {
                         onClick={() => updP(p.id, "pref", p.pref === pr.key ? null : pr.key)}
                         title={p.pref === pr.key ? `${pr.label} (klicka för att ta bort)` : pr.label}
                         style={{
-                          background: p.pref === pr.key ? pr.color : "#1a2940",
+                          background: p.pref === pr.key ? pr.color : "#f5f5f5",
                           border: "none", borderRadius: 6, padding: "3px 7px",
                           fontSize: 12, cursor: "pointer", transition: "all 0.15s",
-                          color: p.pref === pr.key ? (pr.key === "neutral" ? "#0f172a" : "#fff") : "#64748b",
+                          color: p.pref === pr.key ? (pr.key === "neutral" ? "#ffffff" : "#fff") : "#525252",
                           display: "inline-flex", alignItems: "center",
                         }}>
                         <pr.Icon size={12} />
@@ -1341,7 +1367,7 @@ export default function App() {
                 )}
 
                 <button onClick={() => delP(p.id)}
-                  style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", padding: "0 2px", display: "inline-flex", alignItems: "center" }}>
+                  style={{ background: "none", border: "none", color: "#525252", cursor: "pointer", padding: "0 2px", display: "inline-flex", alignItems: "center" }}>
                   <X size={14} />
                 </button>
               </div>
@@ -1357,8 +1383,8 @@ export default function App() {
                 onKeyDown={e => e.key === "Enter" && addPlayer()}
                 placeholder="Spelarens namn..."
                 style={{
-                  flex: 1, background: "#1e293b", border: "1px solid #334155",
-                  color: "#e2e8f0", borderRadius: 9, padding: "10px 13px", fontSize: 14, outline: "none",
+                  flex: 1, background: "#ffffff", border: "1.5px solid #0a0a0a",
+                  color: "#0a0a0a", borderRadius: 9, padding: "10px 13px", fontSize: 14, outline: "none",
                 }}
               />
               <button onClick={addPlayer} style={{ ...S.btn("primary"), padding: "10px 16px", fontSize: 14 }}>
@@ -1372,7 +1398,7 @@ export default function App() {
             {/* Legend */}
             {settings.positions !== false && (
               <div style={{ ...S.card, padding: "10px 14px", marginBottom: 16 }}>
-                <div style={{ fontSize: 12, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Preferenser</div>
+                <div style={{ fontSize: 12, color: "#525252", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Preferenser</div>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                   {PREFS.map(pr => (
                     <div key={pr.key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -1381,7 +1407,7 @@ export default function App() {
                     </div>
                   ))}
                   <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ fontSize: 11, background: GK_COLOR, color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
+                    <span style={{ fontSize: 11, background: GK_COLOR, color: "#ffffff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
                     <span style={{ fontSize: 12, color: GK_COLOR }}>Målvakt</span>
                   </div>
                 </div>
@@ -1390,28 +1416,28 @@ export default function App() {
 
             {/* Settings */}
             <div style={{ ...S.card, padding: "14px" }}>
-              <div style={{ fontSize: 12, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: "#525252", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
                 Matchinställningar
               </div>
 
               {/* Team names */}
               <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ color: "#cbd5e1", fontSize: 14, display: "block", marginBottom: 6 }}>Hemmalag</span>
+                  <span style={{ color: "#404040", fontSize: 14, display: "block", marginBottom: 6 }}>Hemmalag</span>
                   <input id="home-team-input" value={homeTeam} onChange={e => setHomeTeam(e.target.value)} placeholder="Lagnamn"
                     onKeyDown={e => { if (e.key === "Tab" && !e.shiftKey) { e.preventDefault(); document.getElementById("away-team-input")?.focus(); } }}
-                    style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 14, outline: "none", padding: "7px 9px", boxSizing: "border-box" }} />
+                    style={{ width: "100%", background: "#ffffff", border: "1.5px solid #0a0a0a", borderRadius: 7, color: "#0a0a0a", fontSize: 14, outline: "none", padding: "7px 9px", boxSizing: "border-box" }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ color: "#cbd5e1", fontSize: 14, display: "block", marginBottom: 6 }}>Bortalag</span>
+                  <span style={{ color: "#404040", fontSize: 14, display: "block", marginBottom: 6 }}>Bortalag</span>
                   <input id="away-team-input" value={awayTeam} onChange={e => setAwayTeam(e.target.value)} placeholder="Lagnamn"
-                    style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 14, outline: "none", padding: "7px 9px", boxSizing: "border-box" }} />
+                    style={{ width: "100%", background: "#ffffff", border: "1.5px solid #0a0a0a", borderRadius: 7, color: "#0a0a0a", fontSize: 14, outline: "none", padding: "7px 9px", boxSizing: "border-box" }} />
                 </div>
               </div>
 
               {/* Format selector */}
               <div style={{ marginBottom: 12 }}>
-                <span style={{ color: "#cbd5e1", fontSize: 14, display: "block", marginBottom: 8 }}>Spelform</span>
+                <span style={{ color: "#404040", fontSize: 14, display: "block", marginBottom: 8 }}>Spelform</span>
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                   {FORMATS.map(f => (
                     <button key={f.key}
@@ -1425,7 +1451,7 @@ export default function App() {
                   ))}
                 </div>
                 {!FM[settings.format]?.hasGK && (
-                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6 }}>
+                  <div style={{ fontSize: 11, color: "#737373", marginTop: 6 }}>
                     Ej målvakt — alla spelare är utespelare
                   </div>
                 )}
@@ -1439,7 +1465,7 @@ export default function App() {
                 const activeName = settings.formation ?? formations[0].name;
                 return (
                   <div style={{ marginBottom: 16 }}>
-                    <span style={{ color: "#cbd5e1", fontSize: 14, display: "block", marginBottom: 8 }} title="Försvar – mittfält – anfall">Formation</span>
+                    <span style={{ color: "#404040", fontSize: 14, display: "block", marginBottom: 8 }} title="Försvar – mittfält – anfall">Formation</span>
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                       {formations.map(fm => (
                         <button key={fm.name}
@@ -1457,7 +1483,7 @@ export default function App() {
               })()}
 
               <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-                <span style={{ flex: 1, color: "#cbd5e1", fontSize: 14 }}>Positioner</span>
+                <span style={{ flex: 1, color: "#404040", fontSize: 14 }}>Positioner</span>
                 <div style={{ display: "flex", gap: 5 }}>
                   <button onClick={() => setSettings(s => ({ ...s, positions: true }))}
                     style={{ ...S.btn(settings.positions !== false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
@@ -1472,7 +1498,7 @@ export default function App() {
 
               {settings.positions !== false && (
                 <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-                  <span style={{ flex: 1, color: "#cbd5e1", fontSize: 14, paddingRight: 8 }} title="Spelare som stannar mellan byten behåller sin position; bara nya spelare tar lediga platser">
+                  <span style={{ flex: 1, color: "#404040", fontSize: 14, paddingRight: 8 }} title="Spelare som stannar mellan byten behåller sin position; bara nya spelare tar lediga platser">
                     Behåll positioner inom period
                   </span>
                   <div style={{ display: "flex", gap: 5 }}>
@@ -1494,17 +1520,17 @@ export default function App() {
                 ["subs",     "Byten / period",0, 4],
               ].map(([key, label, min, max]) => (
                 <div key={key} style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
-                  <span style={{ flex: 1, color: "#cbd5e1", fontSize: 14 }}>{label}</span>
+                  <span style={{ flex: 1, color: "#404040", fontSize: 14 }}>{label}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <button onClick={() => setSettings(s => ({ ...s, [key]: Math.max(min, s[key] - 1) }))}
-                      style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       −
                     </button>
-                    <span style={{ fontSize: 17, fontWeight: 700, minWidth: 26, textAlign: "center", color: "#84cc16" }}>
+                    <span style={{ fontSize: 17, fontWeight: 700, minWidth: 26, textAlign: "center", color: "#facc15" }}>
                       {settings[key]}
                     </span>
                     <button onClick={() => setSettings(s => ({ ...s, [key]: Math.min(max, s[key] + 1) }))}
-                      style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       +
                     </button>
                   </div>
@@ -1515,7 +1541,7 @@ export default function App() {
             {/* Generate button */}
             <button onClick={doGenerate} style={{
               ...S.btn("primary"), width: "100%", marginTop: 16, padding: 15,
-              fontSize: 17, fontFamily: "'Bebas Neue'", letterSpacing: 3,
+              fontSize: 17, fontFamily: "'Space Grotesk'", letterSpacing: 3,
             }}>
               GENERERA MATCHPLAN <ChevronRight size={17} />
             </button>
@@ -1533,9 +1559,9 @@ export default function App() {
 
         {/* ═══ PLAN TAB ═══ */}
         {tab === "plan" && !plan && (
-          <div style={{ textAlign: "center", padding: "50px 20px", color: "#64748b" }}>
+          <div style={{ textAlign: "center", padding: "50px 20px", color: "#525252" }}>
             <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
-              <ClipboardList size={48} color="#64748b" />
+              <ClipboardList size={48} color="#525252" />
             </div>
             <div style={{ marginBottom: 20, fontSize: 15 }}>Ingen matchplan skapad ännu.</div>
             <button onClick={() => setTab("players")}
@@ -1550,7 +1576,7 @@ export default function App() {
             {sel && (
               <div style={{
                 borderRadius: 9, padding: "9px 14px", marginBottom: 12, fontSize: 12, textAlign: "center",
-                background: "#422006", color: "#fed7aa", border: "1px solid #7c2d12",
+                background: "#fff7ed", color: "#9a3412", border: "1.5px solid #0a0a0a",
               }}>
                 Markerat <strong>{(() => { const p = getP(sel.id); return p ? displayName(p) : ""; })()}</strong> i period {sel.periodIdx + 1} — tryck på en annan spelare i samma period för att byta.
               </div>
@@ -1570,8 +1596,8 @@ export default function App() {
               const isSwitchDue = segCount > 1 && lastBoundary > 0 && !isOvertime;
               const switchBlink = inSwitchWindow && timerElapsed % 2 === 0;
               const barPct      = Math.min(timerElapsed / periodSecs * 100, 100);
-              const barColor    = isOvertime ? "#f87171" : isSwitchDue ? "#fb923c" : "#4ade80";
-              const timeColor   = isOvertime ? "#f87171" : isSwitchDue ? "#fb923c" : "#e2e8f0";
+              const barColor    = isOvertime ? "#dc2626" : isSwitchDue ? "#ea580c" : "#0a0a0a";
+              const timeColor   = isOvertime ? "#991b1b" : isSwitchDue ? "#9a3412" : "#0a0a0a";
               const clampedPeriod = Math.min(timerPeriod, plan.length - 1);
 
               const goPrev = () => { setTimerPeriod(p => Math.max(0, p - 1)); seekTimer(0); };
@@ -1582,49 +1608,49 @@ export default function App() {
                 <>
                   {/* Compact fixed overlay — position:fixed so it never shifts layout */}
                   {timerCompact && (
-                    <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "#1e293b", boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}>
-                      <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "#facc15", borderBottom: "2px solid #0a0a0a" }}>
+                      <div style={{ padding: "10px 14px", display: "flex", flexDirection: "column", gap: 7 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <span style={{ fontFamily: "'Bebas Neue'", fontSize: 14, letterSpacing: 2, color: "#94a3b8", flexShrink: 0 }}>
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.08em", color: "#713f12", flexShrink: 0, fontWeight: 500 }}>
                             {`P${clampedPeriod + 1}/${plan.length}`}
                           </span>
-                          <span style={{ fontFamily: "'Bebas Neue'", fontSize: 38, letterSpacing: 3, color: timeColor, lineHeight: 1, flex: 1 }}>
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 32, letterSpacing: "-0.04em", color: timeColor, lineHeight: 1, flex: 1 }}>
                             {fmtTime(timerElapsed)}
                           </span>
-                          {isSwitchDue && !isOvertime && <ArrowUpDown size={15} color="#fb923c" style={{ flexShrink: 0 }} />}
-                          {isOvertime && <AlertTriangle size={15} color="#f87171" style={{ flexShrink: 0 }} />}
+                          {isSwitchDue && !isOvertime && <ArrowUpDown size={15} color="#0a0a0a" style={{ flexShrink: 0 }} />}
+                          {isOvertime && <AlertTriangle size={15} color="#991b1b" style={{ flexShrink: 0 }} />}
                           <button onClick={() => { setTab("players"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                             title="Gå till Spelare-vyn"
-                            style={{ ...S.btn("secondary"), padding: "7px 10px", flexShrink: 0 }}>
+                            style={{ background: "rgba(10,10,10,0.1)", color: "#0a0a0a", border: "none", borderRadius: 7, padding: "7px 10px", cursor: "pointer", flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                             <Users size={14} />
                           </button>
                           <button onClick={() => setTimerRunning(r => !r)}
-                            style={{ ...S.btn("primary"), padding: "7px 12px", flexShrink: 0 }}>
+                            style={{ background: "#0a0a0a", color: "#facc15", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>
                             {timerRunning ? <Pause size={14} /> : <Play size={14} />}
                           </button>
                         </div>
                         <div
                           onClick={e => { const r = e.currentTarget.getBoundingClientRect(); const dx = e.clientX - r.left; seekTimer(dx / r.width * periodSecs); }}
-                          style={{ height: 6, background: "#0f172a", borderRadius: 3, cursor: "pointer", overflow: "hidden" }}>
-                          <div style={{ width: `${barPct}%`, height: "100%", background: barColor, borderRadius: 3, transition: "width 0.8s linear" }} />
+                          style={{ height: 5, background: "rgba(10,10,10,0.15)", borderRadius: 999, cursor: "pointer", overflow: "hidden" }}>
+                          <div style={{ width: `${barPct}%`, height: "100%", background: barColor, borderRadius: 999, transition: "width 0.8s linear" }} />
                         </div>
                         {(() => {
                           const Sc = ({ score, setScore, name }) => (
                             <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, justifyContent: "center" }}>
                               <button onClick={() => setScore(s => Math.max(0, s - 1))}
-                                style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 6, width: 28, height: 28, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
+                                style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 6, width: 28, height: 28, cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
                               <div style={{ textAlign: "center", minWidth: 44 }}>
-                                <div style={{ fontFamily: "'Bebas Neue'", fontSize: 34, color: "#e2e8f0", lineHeight: 1 }}>{score}</div>
-                                <div style={{ fontSize: 12, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 70 }}>{name}</div>
+                                <div style={{ fontFamily: "'Space Grotesk'", fontSize: 34, color: "#0a0a0a", lineHeight: 1 }}>{score}</div>
+                                <div style={{ fontSize: 12, color: "#737373", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 70 }}>{name}</div>
                               </div>
                               <button onClick={() => setScore(s => s + 1)}
-                                style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 6, width: 28, height: 28, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
+                                style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 6, width: 28, height: 28, cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
                             </div>
                           );
                           return (
                             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                               <Sc score={homeScore} setScore={setHomeScore} name={homeTeam || "Hemmalag"} />
-                              <div style={{ fontFamily: "'Bebas Neue'", fontSize: 22, color: "#64748b", flexShrink: 0 }}>—</div>
+                              <div style={{ fontFamily: "'Space Grotesk'", fontSize: 22, color: "#525252", flexShrink: 0 }}>—</div>
                               <Sc score={awayScore} setScore={setAwayScore} name={awayTeam || "Bortalag"} />
                             </div>
                           );
@@ -1635,19 +1661,21 @@ export default function App() {
 
                   {/* Full card — always in flow; visibility:hidden when compact preserves its space so nothing jumps */}
                   <div ref={timerSentinelRef} style={{ visibility: timerCompact ? "hidden" : "visible", marginBottom: 16 }}>
-                    <div style={{ ...S.card, boxShadow: "0 4px 20px rgba(0,0,0,0.6)" }}>
-                  <div style={{ padding: "16px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={{ fontFamily: "'Bebas Neue'", fontSize: 15, letterSpacing: 2, color: "#64748b" }}>TIMER</div>
-                    <div style={{ fontSize: 13, color: "#94a3b8" }}>Period {clampedPeriod + 1} / {plan.length}</div>
+                    <div style={{ background: "#facc15", border: "2px solid #0a0a0a", borderRadius: 12, overflow: "hidden" }}>
+                  <div style={{ padding: "14px 16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "#713f12", fontWeight: 500 }}>Period {clampedPeriod + 1} / {plan.length}</div>
+                    {isSwitchDue && !isOvertime && (
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#0a0a0a", fontWeight: 700, letterSpacing: "0.05em" }}>BYTE NU</div>
+                    )}
                   </div>
 
                   {/* Big time display */}
-                  <div style={{ textAlign: "center", marginBottom: 10 }}>
-                    <span style={{ fontFamily: "'Bebas Neue'", fontSize: 60, letterSpacing: 4, color: timeColor, lineHeight: 1, transition: "color 0.3s" }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 54, letterSpacing: "-0.04em", color: timeColor, lineHeight: 1, transition: "color 0.3s" }}>
                       {fmtTime(timerElapsed)}
                     </span>
-                    <span style={{ fontSize: 13, color: "#64748b", marginLeft: 6 }}>/ {settings.duration}:00</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: "#713f12", fontWeight: 500 }}>/ {settings.duration}:00</span>
                   </div>
 
                   {/* Progress bar */}
@@ -1658,37 +1686,39 @@ export default function App() {
                       const pct = dx / rect.width;
                       seekTimer(Math.max(0, pct) * periodSecs);
                     }}
-                    style={{ background: "#0f172a", borderRadius: 6, height: 10, marginBottom: 4, position: "relative", overflow: "hidden", cursor: "pointer" }}>
+                    style={{ background: "rgba(10,10,10,0.15)", borderRadius: 999, height: 6, marginBottom: 10, position: "relative", overflow: "hidden", cursor: "pointer" }}>
                     {segCount > 1 && Array.from({ length: segCount - 1 }, (_, k) => (
-                      <div key={k} style={{ position: "absolute", left: `${((k + 1) / segCount) * 100}%`, top: 0, bottom: 0, width: 2, background: "#1e3a5f", zIndex: 1 }} />
+                      <div key={k} style={{ position: "absolute", left: `${((k + 1) / segCount) * 100}%`, top: -2, bottom: -2, width: 2, background: "#ffffff", zIndex: 1 }} />
                     ))}
-                    <div style={{ background: barColor, width: `${barPct}%`, height: "100%", borderRadius: 6, transition: "width 0.8s linear, background 0.3s", pointerEvents: "none" }} />
+                    <div style={{ background: barColor, width: `${barPct}%`, height: "100%", borderRadius: 999, transition: "width 0.8s linear, background 0.3s", pointerEvents: "none" }} />
                   </div>
                   {segCount > 1 && (
-                    <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", marginBottom: 10, letterSpacing: 1, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}>
-                      <ArrowUpDown size={12} /> byte var {(settings.duration / segCount).toFixed(settings.duration % segCount === 0 ? 0 : 1)} min
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#713f12", textAlign: "center", marginBottom: 10, letterSpacing: "0.05em", display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}>
+                      <ArrowUpDown size={10} /> byte var {(settings.duration / segCount).toFixed(settings.duration % segCount === 0 ? 0 : 1)} min
                     </div>
                   )}
 
                   {/* Status banners */}
                   {inSwitchWindow && (
                     <div style={{
-                      background: switchBlink ? "#7c2d12" : "#431407",
-                      border: "1px solid #ea580c", borderRadius: 8,
+                      background: switchBlink ? "#facc15" : "#ffffff",
+                      border: "2px solid #0a0a0a", borderRadius: 8,
                       padding: "8px 12px", textAlign: "center",
-                      fontSize: 13, fontWeight: 700, color: "#fed7aa", marginBottom: 10,
+                      fontSize: 13, fontWeight: 700, color: "#0a0a0a", marginBottom: 10,
                       transition: "background 0.2s",
                       display: "flex", justifyContent: "center", alignItems: "center", gap: 6,
+                      letterSpacing: "0.03em",
                     }}>
                       <ArrowUpDown size={13} /> BYT SPELARE NU!
                     </div>
                   )}
                   {isOvertime && (
                     <div style={{
-                      background: "#450a0a", border: "1px solid #dc2626", borderRadius: 8,
+                      background: "#fee2e2", border: "2px solid #0a0a0a", borderRadius: 8,
                       padding: "8px 12px", textAlign: "center",
-                      fontSize: 13, fontWeight: 700, color: "#fca5a5", marginBottom: 10,
+                      fontSize: 13, fontWeight: 700, color: "#991b1b", marginBottom: 10,
                       display: "flex", justifyContent: "center", alignItems: "center", gap: 6,
+                      letterSpacing: "0.03em",
                     }}>
                       <AlertTriangle size={13} /> ÖVERTID +{fmtTime(timerElapsed - periodSecs)}
                     </div>
@@ -1719,28 +1749,28 @@ export default function App() {
                   </div>
 
                   {/* Scoreboard */}
-                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #1e293b", display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #ffffff", display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
-                      <div style={{ fontSize: 11, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Hemma</div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: homeTeam ? "#e2e8f0" : "#475569", marginBottom: 10, padding: "6px 6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minHeight: 17 }}>
+                      <div style={{ fontSize: 11, color: "#737373", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Hemma</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: homeTeam ? "#0a0a0a" : "#475569", marginBottom: 10, padding: "6px 6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minHeight: 17 }}>
                         {homeTeam || "Hemmalag"}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                        <button onClick={() => setHomeScore(s => Math.max(0, s - 1))} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                        <span style={{ fontFamily: "'Bebas Neue'", fontSize: 44, color: "#e2e8f0", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{homeScore}</span>
-                        <button onClick={() => setHomeScore(s => s + 1)} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                        <button onClick={() => setHomeScore(s => Math.max(0, s - 1))} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                        <span style={{ fontFamily: "'Space Grotesk'", fontSize: 44, color: "#0a0a0a", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{homeScore}</span>
+                        <button onClick={() => setHomeScore(s => s + 1)} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                       </div>
                     </div>
-                    <div style={{ fontFamily: "'Bebas Neue'", fontSize: 32, color: "#64748b", flexShrink: 0, paddingTop: 24 }}>—</div>
+                    <div style={{ fontFamily: "'Space Grotesk'", fontSize: 32, color: "#525252", flexShrink: 0, paddingTop: 24 }}>—</div>
                     <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
-                      <div style={{ fontSize: 11, color: "#94a3b8", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Borta</div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: awayTeam ? "#e2e8f0" : "#475569", marginBottom: 10, padding: "6px 6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minHeight: 17 }}>
+                      <div style={{ fontSize: 11, color: "#737373", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Borta</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: awayTeam ? "#0a0a0a" : "#475569", marginBottom: 10, padding: "6px 6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minHeight: 17 }}>
                         {awayTeam || "Bortalag"}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                        <button onClick={() => setAwayScore(s => Math.max(0, s - 1))} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                        <span style={{ fontFamily: "'Bebas Neue'", fontSize: 44, color: "#e2e8f0", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{awayScore}</span>
-                        <button onClick={() => setAwayScore(s => s + 1)} style={{ background: "#334155", border: "none", color: "#e2e8f0", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                        <button onClick={() => setAwayScore(s => Math.max(0, s - 1))} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                        <span style={{ fontFamily: "'Space Grotesk'", fontSize: 44, color: "#0a0a0a", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{awayScore}</span>
+                        <button onClick={() => setAwayScore(s => s + 1)} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                       </div>
                     </div>
                   </div>
@@ -1776,15 +1806,15 @@ export default function App() {
                   {/* Mobile break separator between periods */}
                   {!isDesktop && i > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "24px 0 20px" }}>
-                      <div style={{ flex: 1, height: 1, background: "#1e293b" }} />
-                      <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 3, fontWeight: 600 }}>paus</div>
-                      <div style={{ flex: 1, height: 1, background: "#1e293b" }} />
+                      <div style={{ flex: 1, height: 1, background: "#ffffff" }} />
+                      <div style={{ fontSize: 11, color: "#737373", textTransform: "uppercase", letterSpacing: 3, fontWeight: 600 }}>paus</div>
+                      <div style={{ flex: 1, height: 1, background: "#ffffff" }} />
                     </div>
                   )}
 
                   <div style={{
                     ...S.card, marginBottom: 0,
-                    outline: timerPeriod === i ? `2px solid ${timerRunning ? "#4ade80" : "#334155"}` : "none",
+                    outline: timerPeriod === i ? `2px solid ${timerRunning ? "#22c55e" : "#d4d4d4"}` : "none",
                     outlineOffset: 2,
                   }}>
 
@@ -1793,22 +1823,28 @@ export default function App() {
                         tabs (or even empty space) don't fold the period. */}
                     <div
                       style={{
-                        background: "linear-gradient(135deg, #0a2e1a 0%, #0d3821 100%)",
-                        padding: "10px 16px",
+                        background: "#ffffff",
+                        padding: "10px 14px",
                         display: "flex", justifyContent: "space-between", alignItems: "center",
-                        borderBottom: collapsedPeriods.has(i) ? "none" : "1px solid #1a5c33",
+                        borderBottom: collapsedPeriods.has(i) ? "none" : "2px solid #0a0a0a",
                         userSelect: "none",
                       }}>
                       <div
                         onClick={() => togglePeriod(i)}
                         title={collapsedPeriods.has(i) ? "Expandera period" : "Komprimera period"}
                         style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                        {collapsedPeriods.has(i)
-                          ? <ChevronRight size={16} color="#4ade80" />
-                          : <ChevronDown size={16} color="#4ade80" />}
-                        <div style={{ fontFamily: "'Bebas Neue'", fontSize: 22, letterSpacing: 2, color: "#4ade80" }}>
+                        <div style={{
+                          background: timerPeriod === i ? "#facc15" : "#ffffff",
+                          color: "#0a0a0a", fontSize: 10, fontWeight: 700,
+                          padding: "3px 8px", borderRadius: 4,
+                          letterSpacing: "0.05em", border: "1.5px solid #0a0a0a",
+                        }}>P{i + 1}</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: "-0.01em", color: "#0a0a0a" }}>
                           Period {i + 1}
                         </div>
+                        {collapsedPeriods.has(i)
+                          ? <ChevronRight size={14} color="#525252" />
+                          : <ChevronDown size={14} color="#525252" />}
                       </div>
                       {segCount > 1 ? (
                         <div style={{ display: "flex", gap: 4 }}>
@@ -1824,22 +1860,22 @@ export default function App() {
                                 }}
                                 title={isLive ? "Spelas just nu" : `Visa segment ${k + 1}`}
                                 style={{
-                                  background: active ? "#4ade80" : "#0d3821",
-                                  color: active ? "#0a2e1a" : "#4ade80",
-                                  border: `1px solid ${active ? "#4ade80" : "#1a5c33"}`,
+                                  background: active ? "#facc15" : "#ffffff",
+                                  color: "#0a0a0a",
+                                  border: "1.5px solid #0a0a0a",
                                   borderRadius: 6, padding: "3px 9px", fontSize: 12, fontWeight: 700,
                                   cursor: "pointer", minWidth: 26,
                                   position: "relative",
                                 }}>
                                 {k + 1}
-                                {isLive && !active && <span style={{ position: "absolute", top: 1, right: 2, width: 5, height: 5, borderRadius: "50%", background: "#fb923c" }} />}
+                                {isLive && !active && <span style={{ position: "absolute", top: -3, right: -3, width: 7, height: 7, borderRadius: "50%", background: "#dc2626", border: "1.5px solid #0a0a0a" }} />}
                               </button>
                             );
                           })}
                         </div>
                       ) : (
-                        <div style={{ fontSize: 12, color: "#4ade80", opacity: 0.7 }}>
-                          {settings.format} &nbsp;·&nbsp; {settings.duration} min
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#0a0a0a", background: "#fef3c7", padding: "3px 8px", borderRadius: 4, fontWeight: 700, border: "1.5px solid #0a0a0a" }}>
+                          {settings.format} · {settings.duration} min
                         </div>
                       )}
                     </div>
@@ -1856,13 +1892,13 @@ export default function App() {
                         </div>
                         {hasBench && (
                           <div style={{
-                            background: "#0d1a26",
+                            background: "#fafafa",
                             ...(isDesktop
-                              ? { borderLeft: "1px solid #1e293b", padding: "12px 12px" }
-                              : { borderTop: "1px solid #1e293b", padding: "10px 14px" }),
+                              ? { borderLeft: "2px solid #0a0a0a", padding: "12px 12px" }
+                              : { borderTop: "2px dashed #0a0a0a", padding: "10px 14px" }),
                           }}>
-                            <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7, fontWeight: 600 }}>
-                              Bänk
+                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#525252", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 7, fontWeight: 700 }}>
+                              BÄNK
                             </div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, flexDirection: isDesktop ? "column" : "row", alignItems: isDesktop ? "stretch" : "center" }}>
                               {period.bench.map(id => <Chip key={id} id={id} small periodIdx={i} />)}
@@ -1882,7 +1918,7 @@ export default function App() {
             <div style={isDesktop ? { position: "sticky", top: 0 } : { marginTop: 24 }}>
             <div style={{ ...S.card, padding: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, gap: 10 }}>
-                <div style={{ fontFamily: "'Bebas Neue'", fontSize: 20, letterSpacing: 2, color: "#94a3b8" }}>
+                <div style={{ fontFamily: "'Space Grotesk'", fontSize: 20, letterSpacing: 2, color: "#737373" }}>
                   Speltid — {totalPossible} min totalt
                 </div>
                 {settings.positions !== false && (
@@ -1890,8 +1926,8 @@ export default function App() {
                     style={{
                       ...S.btn("secondary"),
                       padding: "6px 10px", fontSize: 12, flexShrink: 0,
-                      background: justShuffled ? "#84cc16" : "#1e293b",
-                      color: justShuffled ? "#0f172a" : "#84cc16",
+                      background: justShuffled ? "#facc15" : "#ffffff",
+                      color: justShuffled ? "#ffffff" : "#facc15",
                       transition: "background 0.2s, color 0.2s",
                     }}>
                     <Shuffle size={13} /> {justShuffled ? "Slumpat!" : "Slumpa"}
@@ -1904,8 +1940,8 @@ export default function App() {
                   const m = mins[p.id] ?? 0;
                   const pct = totalPossible > 0 ? (m / totalPossible) * 100 : 0;
                   const pref = PM[p.pref];
-                  const barColor = p.isGK ? GK_COLOR : (pref?.color ?? "#94a3b8");
-                  const textColor = pct >= 75 ? "#4ade80" : pct >= 45 ? "#fbbf24" : "#f87171";
+                  const barColor = p.isGK ? GK_COLOR : (pref?.color ?? "#737373");
+                  const textColor = pct >= 75 ? "#166534" : pct >= 45 ? "#9a3412" : "#991b1b";
 
                   const ps = posStats[p.id] ?? {};
                   const posBadges = [
@@ -1913,7 +1949,7 @@ export default function App() {
                     ps.att   > 0 && { key: "att",   label: null,   Icon: Zap,     count: ps.att,   bg: "#ef444426", color: "#ef4444" },
                     ps.mid   > 0 && { key: "mid",   label: null,   Icon: Shuffle, count: ps.mid,   bg: "#f9731626", color: "#f97316" },
                     ps.def   > 0 && { key: "def",   label: null,   Icon: Shield,  count: ps.def,   bg: "#facc1526", color: "#facc15" },
-                    ps.bench > 0 && { key: "bench", label: "Bänk", Icon: null,    count: ps.bench, bg: "#1e293b",   color: "#64748b" },
+                    ps.bench > 0 && { key: "bench", label: "Bänk", Icon: null,    count: ps.bench, bg: "#ffffff",   color: "#525252" },
                   ].filter(Boolean);
 
                   const showPositions = settings.positions !== false;
@@ -1922,10 +1958,10 @@ export default function App() {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           {p.isGK
-                            ? <span style={{ fontSize: 11, background: GK_COLOR, color: "#0f172a", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
+                            ? <span style={{ fontSize: 11, background: GK_COLOR, color: "#ffffff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
                             : showPositions && pref && <pref.Icon size={12} color={pref.color} />
                           }
-                          <span style={{ fontSize: 13, color: "#cbd5e1" }}>{displayName(p)}</span>
+                          <span style={{ fontSize: 13, color: "#404040" }}>{displayName(p)}</span>
                         </div>
                         <span style={{ fontSize: 13, fontWeight: 700, color: textColor }}>
                           {Math.round(m)} min
@@ -1944,14 +1980,14 @@ export default function App() {
                           ))}
                         </div>
                       )}
-                      <div style={{ background: "#0f172a", borderRadius: 5, height: 8, overflow: "hidden", display: "flex" }}>
+                      <div style={{ background: "#ffffff", borderRadius: 5, height: 8, overflow: "hidden", display: "flex" }}>
                         {showPositions ? (
                           [
                             { count: ps.gk,    color: GK_COLOR },
                             { count: ps.att,   color: "#ef4444" },
                             { count: ps.mid,   color: "#f97316" },
                             { count: ps.def,   color: "#facc15" },
-                            { count: ps.bench, color: "#1e3a5f" },
+                            { count: ps.bench, color: "#d4d4d4" },
                           ].map(({ count, color }, si) => {
                             const total = (ps.gk ?? 0) + (ps.att ?? 0) + (ps.mid ?? 0) + (ps.def ?? 0) + (ps.bench ?? 0);
                             const c = count ?? 0;
@@ -1976,10 +2012,10 @@ export default function App() {
                 return (
                   <div style={{
                     marginTop: 12, padding: "8px 12px", borderRadius: 8,
-                    background: fair ? "#0a2e1a" : "#2d1b0a",
-                    border: `1px solid ${fair ? "#1a5c33" : "#7c3d12"}`,
-                    fontSize: 12,
-                    color: fair ? "#4ade80" : "#fb923c",
+                    background: fair ? "#f0fdf4" : "#fff7ed",
+                    border: `2px solid ${fair ? "#166534" : "#9a3412"}`,
+                    fontSize: 12, fontWeight: 600,
+                    color: fair ? "#166534" : "#9a3412",
                     display: "flex", justifyContent: "center", alignItems: "center", gap: 6,
                   }}>
                     {fair
@@ -2008,7 +2044,7 @@ export default function App() {
         Matchplaneraren är ett verktyg framtaget av{" "}
         <a href="https://www.linkedin.com/in/rickardberggren/"
           target="_blank" rel="noopener noreferrer"
-          style={{ color: "#84cc16", textDecoration: "none", fontWeight: 600 }}>
+          style={{ color: "#facc15", textDecoration: "none", fontWeight: 600 }}>
           Rickard Berggren
         </a>
         , ledare i Mälarhöjden-Hägersten FF
