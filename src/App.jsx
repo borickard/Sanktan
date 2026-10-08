@@ -989,14 +989,14 @@ export default function App() {
       <div
         onClick={e => { e.stopPropagation(); tapPlayer(id, periodIdx); }}
         style={{
-          display: "inline-flex", alignItems: "center", gap: 4,
-          maxWidth: "100%", overflow: "hidden",
+          display: "inline-flex", alignItems: "center", gap: 5,
           background: isSelected ? "#facc15" : (flavorBg ?? "#ffffff"),
           color: isSelected ? "#0a0a0a" : flavorColor,
           border: `1.5px solid ${isSelected ? "#0a0a0a" : activeGK ? GK_COLOR : (flavorBorder ?? "#0a0a0a")}`,
           borderRadius: 999,
-          padding: small ? "3px 10px" : "5px 11px",
-          fontSize: small ? 12 : 13,
+          padding: small ? "4px 11px" : "6px 13px",
+          fontSize: small ? 13 : 14,
+          lineHeight: 1.2,
           fontWeight: flavor === "in" ? 700 : 600,
           textDecoration: flavor === "out" ? "line-through" : "none",
           textDecorationColor: flavor === "out" ? "#dc2626" : undefined,
@@ -1006,6 +1006,7 @@ export default function App() {
           userSelect: "none", WebkitUserSelect: "none",
           opacity: isSel2nd ? 0.75 : 1,
           boxShadow: isSelected ? "0 0 0 3px rgba(250,204,21,0.35)" : "none",
+          whiteSpace: "nowrap",
         }}
       >
         {activeGK && (
@@ -1014,12 +1015,7 @@ export default function App() {
         {p.isGK && !inGKSlot && (
           <span style={{ fontSize: 10, color: flavor === "in" ? "#ffffff" : flavor === "out" ? "#991b1b" : "#737373", fontWeight: 500, opacity: flavor === "out" ? 0.75 : 1 }}>mv</span>
         )}
-        <span style={{
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          minWidth: 0,
-        }}>{displayName(p)}</span>
+        <span>{displayName(p)}</span>
       </div>
     );
   };
@@ -1036,24 +1032,24 @@ export default function App() {
     const z = ZONE_STYLE[label] ?? { bg: "#fafafa", strip: "#d4d4d4", color: "#525252", short: label };
     return (
       <div style={{
-        display: "flex", alignItems: "stretch", marginBottom: 8,
-        background: z.bg, borderLeft: `4px solid ${z.strip}`, borderRadius: 8,
-        padding: "8px 6px 8px 8px",
+        display: "flex", alignItems: "flex-start", marginBottom: 6,
+        background: z.bg, borderLeft: `5px solid ${z.strip}`, borderRadius: 8,
+        padding: "9px 8px 9px 10px", minHeight: 36,
       }}>
         <div style={{
           fontFamily: "'Space Grotesk', system-ui, sans-serif",
           fontSize: 11, color: z.color, fontWeight: 700,
           letterSpacing: "0.06em",
-          padding: "2px 6px 0 0",
-          minWidth: 36,
+          padding: "4px 10px 0 0",
+          minWidth: 42,
           flexShrink: 0,
         }}>
           {z.short}
         </div>
         <div style={{
           flex: 1, minWidth: 0,
-          display: "flex", flexWrap: "wrap", justifyContent: "center",
-          gap: 6, rowGap: 6, alignItems: "flex-start",
+          display: "flex", flexWrap: "wrap", justifyContent: "flex-start",
+          gap: 8, rowGap: 8, alignItems: "flex-start",
         }}>
           {children}
         </div>
@@ -1105,19 +1101,16 @@ export default function App() {
           </div>
         )}
         {fmt.hasGK && (
-          <>
-            <div style={{ borderTop: "2px dashed #0a0a0a", margin: "10px 0 8px" }} />
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 2px" }}>
-              <div style={{
-                fontFamily: "'Space Grotesk', system-ui, sans-serif",
-                fontSize: 11, color: "#525252", fontWeight: 700,
-                letterSpacing: "0.06em", minWidth: 36, flexShrink: 0,
-              }}>MV</div>
-              <div style={{ display: "flex", gap: 6, flex: 1 }}>
-                <PositionSlot ids={[gk]} label="" periodIdx={periodIdx} selectedSegmentIdx={0} isGKSlot />
-              </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 10px 2px", marginTop: 2 }}>
+            <div style={{
+              fontFamily: "'Space Grotesk', system-ui, sans-serif",
+              fontSize: 11, color: "#525252", fontWeight: 700,
+              letterSpacing: "0.06em", minWidth: 42, flexShrink: 0,
+            }}>MV</div>
+            <div style={{ display: "flex", gap: 8, flex: 1 }}>
+              <PositionSlot ids={[gk]} label="" periodIdx={periodIdx} selectedSegmentIdx={0} isGKSlot />
             </div>
-          </>
+          </div>
         )}
       </div>
     );
@@ -1141,7 +1134,7 @@ export default function App() {
     const prevId = prevSegmentIdx != null ? (ids[prevSegmentIdx] ?? null) : null;
     const justChanged = prevId != null && prevId !== curId;
     return (
-      <div style={{ textAlign: "center", flex: "1 1 90px", minWidth: 75, maxWidth: 180, overflow: "hidden" }}>
+      <div style={{ textAlign: "left", flex: "0 0 auto", minWidth: 0, overflow: "visible" }}>
         {label && (
           <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#525252", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5, fontWeight: 700 }}>
             {label}
@@ -1748,33 +1741,35 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* Scoreboard */}
-                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #ffffff", display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
-                      <div style={{ fontSize: 11, color: "#737373", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Hemma</div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: homeTeam ? "#0a0a0a" : "#475569", marginBottom: 10, padding: "6px 6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minHeight: 17 }}>
-                        {homeTeam || "Hemmalag"}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                        <button onClick={() => setHomeScore(s => Math.max(0, s - 1))} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                        <span style={{ fontFamily: "'Space Grotesk'", fontSize: 44, color: "#0a0a0a", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{homeScore}</span>
-                        <button onClick={() => setHomeScore(s => s + 1)} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
-                      </div>
-                    </div>
-                    <div style={{ fontFamily: "'Space Grotesk'", fontSize: 32, color: "#525252", flexShrink: 0, paddingTop: 24 }}>—</div>
-                    <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
-                      <div style={{ fontSize: 11, color: "#737373", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Borta</div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: awayTeam ? "#0a0a0a" : "#475569", marginBottom: 10, padding: "6px 6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minHeight: 17 }}>
-                        {awayTeam || "Bortalag"}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                        <button onClick={() => setAwayScore(s => Math.max(0, s - 1))} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                        <span style={{ fontFamily: "'Space Grotesk'", fontSize: 44, color: "#0a0a0a", minWidth: 40, textAlign: "center", lineHeight: 1 }}>{awayScore}</span>
-                        <button onClick={() => setAwayScore(s => s + 1)} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
-                      </div>
+                  </div>
                     </div>
                   </div>
-                  </div>
+
+                  {/* Scoreboard — two side-by-side team cards (Bold style) */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+                    <div style={{ background: "#ffffff", border: "2px solid #0a0a0a", borderRadius: 10, padding: "9px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 11, color: "#0a0a0a", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {homeTeam || "Hemmalag"}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                          <button onClick={() => setHomeScore(s => Math.max(0, s - 1))} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 6, width: 24, height: 24, cursor: "pointer", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
+                          <button onClick={() => setHomeScore(s => s + 1)} style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 6, width: 24, height: 24, cursor: "pointer", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
+                        </div>
+                      </div>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 28, lineHeight: 1, color: "#0a0a0a", flexShrink: 0 }}>{homeScore}</div>
+                    </div>
+                    <div style={{ background: "#0a0a0a", color: "#ffffff", borderRadius: 10, padding: "9px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 28, lineHeight: 1, color: "#ffffff", flexShrink: 0 }}>{awayScore}</div>
+                      <div style={{ minWidth: 0, flex: 1, textAlign: "right" }}>
+                        <div style={{ fontSize: 11, color: "#ffffff", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {awayTeam || "Bortalag"}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, justifyContent: "flex-end" }}>
+                          <button onClick={() => setAwayScore(s => Math.max(0, s - 1))} style={{ background: "#262626", border: "1.5px solid #ffffff", color: "#ffffff", borderRadius: 6, width: 24, height: 24, cursor: "pointer", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>−</button>
+                          <button onClick={() => setAwayScore(s => s + 1)} style={{ background: "#262626", border: "1.5px solid #ffffff", color: "#ffffff", borderRadius: 6, width: 24, height: 24, cursor: "pointer", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </>
@@ -1800,7 +1795,24 @@ export default function App() {
                    incoming = green, outgoing (shown below) = red. The first
                    tab has nothing to compare against, so chips render plain. */
                 const prevSegmentIdx = selectedSegmentIdx > 0 ? selectedSegmentIdx - 1 : null;
-                const hasBench = period.bench.length > 0;
+                /* Who's on bench during the shown segment = everyone enabled
+                   who isn't in that segment's lineup or GK slot. */
+                const curSeg = period.lineups[selectedSegmentIdx] ?? period.lineups[0];
+                const onFieldNow = new Set([
+                  ...(curSeg?.att ?? []),
+                  ...(curSeg?.mid ?? []),
+                  ...(curSeg?.def ?? []),
+                  period.gk,
+                ]);
+                const prevSeg = prevSegmentIdx != null ? period.lineups[prevSegmentIdx] : null;
+                const onFieldPrev = prevSeg ? new Set([
+                  ...(prevSeg.att ?? []),
+                  ...(prevSeg.mid ?? []),
+                  ...(prevSeg.def ?? []),
+                  period.gk,
+                ]) : null;
+                const segBench = activePlayers.filter(p => !onFieldNow.has(p.id));
+                const hasBench = segBench.length > 0;
                 return (
                 <div key={i}>
                   {/* Mobile break separator between periods */}
@@ -1881,27 +1893,37 @@ export default function App() {
                     </div>
 
                     {!collapsedPeriods.has(i) && (
-                      <div style={isDesktop && hasBench ? { display: "grid", gridTemplateColumns: "1fr 150px", alignItems: "stretch" } : {}}>
-                        <div>
-                          <Pitch
-                            lineups={period.lineups}
-                            gk={period.gk} periodIdx={i}
-                            selectedSegmentIdx={selectedSegmentIdx}
-                            prevSegmentIdx={prevSegmentIdx}
-                          />
-                        </div>
+                      <div>
+                        <Pitch
+                          lineups={period.lineups}
+                          gk={period.gk} periodIdx={i}
+                          selectedSegmentIdx={selectedSegmentIdx}
+                          prevSegmentIdx={prevSegmentIdx}
+                        />
                         {hasBench && (
                           <div style={{
-                            background: "#fafafa",
-                            ...(isDesktop
-                              ? { borderLeft: "2px solid #0a0a0a", padding: "12px 12px" }
-                              : { borderTop: "2px dashed #0a0a0a", padding: "10px 14px" }),
+                            display: "flex", alignItems: "flex-start",
+                            padding: "10px 10px 10px 10px",
+                            borderTop: "2px dashed #0a0a0a",
+                            margin: "4px 10px 0",
                           }}>
-                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#525252", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 7, fontWeight: 700 }}>
-                              BÄNK
-                            </div>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, flexDirection: isDesktop ? "column" : "row", alignItems: isDesktop ? "stretch" : "center" }}>
-                              {period.bench.map(id => <Chip key={id} id={id} small periodIdx={i} />)}
+                            <div style={{
+                              fontFamily: "'Space Grotesk', system-ui, sans-serif",
+                              fontSize: 11, color: "#525252", fontWeight: 700,
+                              letterSpacing: "0.06em",
+                              padding: "4px 10px 0 0",
+                              minWidth: 42,
+                              flexShrink: 0,
+                            }}>BÄNK</div>
+                            <div style={{ flex: 1, display: "flex", flexWrap: "wrap", gap: 8, rowGap: 8, alignItems: "flex-start" }}>
+                              {segBench.map(p => {
+                                /* In a switch window: a player who was on-field in the
+                                   previous segment but is now on bench has just arrived
+                                   here = "in" (green), mirroring the color rule for
+                                   field pills. */
+                                const justArrived = onFieldPrev && onFieldPrev.has(p.id);
+                                return <Chip key={p.id} id={p.id} small periodIdx={i} flavor={justArrived ? "in" : undefined} />;
+                              })}
                             </div>
                           </div>
                         )}
