@@ -1587,14 +1587,31 @@ export default function App() {
         {tab === "plan" && plan && (
           <div>
             {sel && (
-              <div style={{
-                borderRadius: 9, padding: "9px 14px", marginBottom: 12, fontSize: 12, textAlign: "center",
-                background: "#fff7ed", color: "#9a3412", border: "1.5px solid #0a0a0a",
-              }}>
-                Markerat <strong>{(() => { const p = getP(sel.id); return p ? displayName(p) : ""; })()}</strong> i period {sel.periodIdx + 1} — tryck på en annan spelare i samma period för att byta.
+              <div
+                onClick={e => { e.stopPropagation(); setSel(null); }}
+                style={{
+                  position: "fixed", bottom: 20, left: "50%",
+                  transform: "translateX(-50%)",
+                  zIndex: 90,
+                  maxWidth: "calc(100vw - 32px)",
+                  borderRadius: 10,
+                  padding: "10px 14px 10px 16px",
+                  fontSize: 13,
+                  background: "#facc15",
+                  color: "#0a0a0a",
+                  border: "2px solid #0a0a0a",
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.2)",
+                  display: "flex", alignItems: "center", gap: 10,
+                  cursor: "pointer",
+                  fontWeight: 500,
+                }}
+              >
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 320 }}>
+                  Markerat <strong>{(() => { const p = getP(sel.id); return p ? displayName(p) : ""; })()}</strong> i period {sel.periodIdx + 1} · tryck på en annan spelare att byta med
+                </span>
+                <X size={16} style={{ flexShrink: 0 }} aria-label="Avmarkera" />
               </div>
             )}
-            <div style={{ marginBottom: 16 }} />
 
             {/* ─── Timer ─── */}
             {(() => {
