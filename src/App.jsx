@@ -1199,13 +1199,20 @@ export default function App() {
           <div
             onClick={e => { e.stopPropagation(); resetAll(); }}
             title="Klicka för att återställa allt"
-            style={{ fontSize: "clamp(20px, 6vw, 26px)", color: "#0a0a0a", lineHeight: 1, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 10, fontWeight: 700, letterSpacing: "-0.02em" }}
+            style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: 22, color: "#0a0a0a", lineHeight: 1, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 1, fontWeight: 800, letterSpacing: "-0.03em" }}
           >
-            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, background: "#0a0a0a", borderRadius: 8 }}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="3.5" stroke="#fff" strokeWidth="1.8"/></svg>
-            </span>
+            {/* Stoppur — svart solid kropp, vit prickmitt, gul visare.
+                viewBox centrerad kring cirkeln (12,12) så align-items:center
+                lägger cirkelns mitt på textens optiska mitt. */}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ marginRight: 2 }}>
+              <circle cx="12" cy="12" r="7.5" fill="#0a0a0a"/>
+              <rect x="9.5" y="0" width="5" height="3" rx="0.5" fill="#0a0a0a"/>
+              <line x1="12" y1="3" x2="12" y2="4.5" stroke="#0a0a0a" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="12" y1="12" x2="15.5" y2="8.5" stroke="#facc15" strokeWidth="2.3" strokeLinecap="round"/>
+              <circle cx="12" cy="12" r="1.2" fill="#ffffff"/>
+            </svg>
             Speltid
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.55em", color: "#0a0a0a", background: "#facc15", padding: "2px 8px", borderRadius: 4, letterSpacing: "0.04em", fontWeight: 700, border: "1.5px solid #0a0a0a" }}>{settings.format}</span>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#0a0a0a", background: "#facc15", padding: "2px 8px", borderRadius: 4, letterSpacing: "0.04em", fontWeight: 700, border: "1.5px solid #0a0a0a", marginLeft: 8 }}>{settings.format}</span>
           </div>
         </div>
         <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#525252", marginTop: 6, lineHeight: 1.6, letterSpacing: "0.02em" }}>
