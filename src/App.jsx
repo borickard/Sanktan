@@ -846,9 +846,10 @@ export default function App() {
       style={{
         width: "100%", padding: "10px 12px",
         background: shareCopied ? "#22c55e" : "#ffffff",
-        border: `1.5px solid ${shareCopied ? "#22c55e" : "#0a0a0a"}`,
+        border: "2px solid #0a0a0a",
         borderRadius: 9,
-        color: shareCopied ? "#fff" : "#737373",
+        color: shareCopied ? "#fff" : "#525252",
+        fontWeight: shareCopied ? 700 : 500,
         fontSize: 13, fontFamily: "'Space Grotesk', system-ui, sans-serif", cursor: "pointer",
         display: "flex", alignItems: "center", gap: 8, textAlign: "left",
         ...extraStyle,
@@ -862,12 +863,13 @@ export default function App() {
     <button onClick={shareLink} disabled={shareLoading}
       style={{
         ...S.btn("primary"), width: "100%", padding: "11px 0", fontSize: 14, fontWeight: 700,
-        background: shareError ? "#7f1d1d" : "#3b82f6",
-        color: "#fff", border: "none",
+        background: shareError ? "#fee2e2" : "#3b82f6",
+        color: shareError ? "#991b1b" : "#fff",
+        border: "2px solid #0a0a0a",
         opacity: shareLoading ? 0.7 : 1,
         ...extraStyle,
       }}>
-      {shareLoading ? "Skapar länk…" : shareError ? <><AlertTriangle size={14} /> Fel: {shareError}</> : <><Link2 size={14} /> Dela kort länk</>}
+      {shareLoading ? "Skapar länk…" : shareError ? <><AlertTriangle size={14} /> Fel: {shareError}</> : <><Link2 size={14} /> Dela kortlänk</>}
     </button>
   );
 
@@ -950,6 +952,16 @@ export default function App() {
     return m;
   };
 
+  /* GK-only minutes per player, so fairness can look at outfield time alone
+     and not flag an imbalance that's caused by a locked-in goalkeeper. */
+  const calcGKMins = () => {
+    if (!plan) return {};
+    const FULL = settings.duration;
+    const g = Object.fromEntries(players.map(p => [p.id, 0]));
+    plan.forEach(({ gk }) => { if (gk) g[gk] = (g[gk] ?? 0) + FULL; });
+    return g;
+  };
+
   const calcPositionStats = () => {
     if (!plan) return {};
     const stats = Object.fromEntries(
@@ -968,6 +980,7 @@ export default function App() {
   };
 
   const mins = calcMins();
+  const gkMins = calcGKMins();
   const posStats = calcPositionStats();
   const totalPossible = settings.periods * settings.duration;
 
@@ -1988,8 +2001,8 @@ export default function App() {
                       ...S.btn("secondary"),
                       padding: "6px 10px", fontSize: 12, flexShrink: 0,
                       background: justShuffled ? "#facc15" : "#ffffff",
-                      color: justShuffled ? "#ffffff" : "#facc15",
-                      transition: "background 0.2s, color 0.2s",
+                      color: "#0a0a0a",
+                      transition: "background 0.2s",
                     }}>
                     <Shuffle size={13} /> {justShuffled ? "Slumpat!" : "Slumpa"}
                   </button>
@@ -2063,13 +2076,16 @@ export default function App() {
                   );
                 })}
 
-              {/* Fairness score */}
+              {/* Fairness score — based on OUTFIELD minutes so a locked-in
+                  goalkeeper doesn't skew the result. Pure GKs (0 outfield min)
+                  are excluded; their extra time is unavoidable. */}
               {(() => {
-                const vals = activePlayers.map(p => mins[p.id] ?? 0);
-                const sum = vals.reduce((a, b) => a + b, 0);
-                const avg = sum / vals.length;
-                const maxDiff = Math.max(...vals.map(v => Math.abs(v - avg)));
-                const fair = maxDiff <= settings.duration / 2;
+                const outfieldVals = activePlayers
+                  .map(p => (mins[p.id] ?? 0) - (gkMins[p.id] ?? 0))
+                  .filter(v => v > 0);
+                if (outfieldVals.length < 2) return null;
+                const spread = Math.max(...outfieldVals) - Math.min(...outfieldVals);
+                const fair = spread <= settings.duration / 2;
                 return (
                   <div style={{
                     marginTop: 12, padding: "8px 12px", borderRadius: 8,
@@ -2081,7 +2097,7 @@ export default function App() {
                   }}>
                     {fair
                       ? <><Check size={12} /> Speltiden är jämnt fördelad</>
-                      : <><AlertTriangle size={12} /> Max skillnad: {Math.round(maxDiff)} min — byt runt för bättre balans</>
+                      : <><AlertTriangle size={12} /> Spelartid skiljer {Math.round(spread)} min — Slumpa för bättre balans</>
                     }
                   </div>
                 );
