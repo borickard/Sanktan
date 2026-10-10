@@ -47,25 +47,6 @@ const FORMATS = [
       { name: "1-3-2",   def: 1, mid: 3, att: 2 },
     ],
   },
-  { key: "9v9",   label: "9v9",   hasGK: true,  total: 9,
-    formations: [
-      { name: "3-3-2",   def: 3, mid: 3, att: 2 },
-      { name: "2-3-3",   def: 2, mid: 3, att: 3 },
-      { name: "3-4-1",   def: 3, mid: 4, att: 1 },
-      { name: "2-4-2",   def: 2, mid: 4, att: 2 },
-      { name: "4-3-1",   def: 4, mid: 3, att: 1 },
-    ],
-  },
-  { key: "11v11", label: "11v11", hasGK: true,  total: 11,
-    formations: [
-      { name: "4-4-2",   def: 4, mid: 4, att: 2 },
-      { name: "4-3-3",   def: 4, mid: 3, att: 3 },
-      { name: "3-5-2",   def: 3, mid: 5, att: 2 },
-      { name: "3-4-3",   def: 3, mid: 4, att: 3 },
-      { name: "5-3-2",   def: 5, mid: 3, att: 2 },
-      { name: "5-4-1",   def: 5, mid: 4, att: 1 },
-    ],
-  },
 ];
 /* Lookup helpers: pick a formation by name within a format. */
 const formationForKey = (fmtKey, formationName) => {
@@ -79,7 +60,7 @@ const defaultFormationName = fmtKey => {
 };
 /* Per-format default period length in minutes — applied when the user
    picks a format, matching common youth-football norms in Sweden. */
-const FORMAT_DEFAULT_DURATION = { "3v3": 12, "5v5": 15, "7v7": 20, "9v9": 25, "11v11": 35 };
+const FORMAT_DEFAULT_DURATION = { "3v3": 12, "5v5": 15, "7v7": 20 };
 const FM = Object.fromEntries(FORMATS.map(f => [f.key, f]));
 /* Merge format (hasGK, total, label) with the chosen formation (att, mid, def). */
 const getFmt = (settings) => {
@@ -757,7 +738,17 @@ export default function App() {
     if (activePlayers.length < fmt.total) {
       return alert(`Aktivera minst ${fmt.total} spelare för ${fmt.label}!`);
     }
-    const newPlan = generatePlan(activePlayers, settings);
+    /* Any player who was left nameless gets the "Spelare N" placeholder
+       committed before we build the plan, so the generated matchplan has
+       real names baked in (sharable links, swaps, chip labels). */
+    const anyEmpty = players.some(p => !p.name?.trim());
+    if (anyEmpty) {
+      setPlayers(prev => prev.map((p, i) => p.name?.trim() ? p : { ...p, name: `Spelare ${i + 1}` }));
+    }
+    const named = anyEmpty
+      ? activePlayers.map(p => p.name?.trim() ? p : { ...p, name: `Spelare ${players.findIndex(x => x.id === p.id) + 1}` })
+      : activePlayers;
+    const newPlan = generatePlan(named, settings);
     setPlan(newPlan);
     setOriginalPlan(newPlan);
     setTab("plan");
@@ -768,6 +759,9 @@ export default function App() {
     setTimerElapsed(0);
     setTimerPeriod(0);
     try { localStorage.removeItem("sanktan-timer-v1"); } catch {}
+    /* Jump to the top so the user starts at Period 1 + the timer card
+       rather than wherever the Spelare scroll position left them. */
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   const doReset = () => {
@@ -846,9 +840,10 @@ export default function App() {
       style={{
         width: "100%", padding: "10px 12px",
         background: shareCopied ? "#22c55e" : "#ffffff",
-        border: `1.5px solid ${shareCopied ? "#22c55e" : "#0a0a0a"}`,
+        border: "2px solid #0a0a0a",
         borderRadius: 9,
-        color: shareCopied ? "#fff" : "#737373",
+        color: shareCopied ? "#fff" : "#525252",
+        fontWeight: shareCopied ? 700 : 500,
         fontSize: 13, fontFamily: "'Space Grotesk', system-ui, sans-serif", cursor: "pointer",
         display: "flex", alignItems: "center", gap: 8, textAlign: "left",
         ...extraStyle,
@@ -862,12 +857,13 @@ export default function App() {
     <button onClick={shareLink} disabled={shareLoading}
       style={{
         ...S.btn("primary"), width: "100%", padding: "11px 0", fontSize: 14, fontWeight: 700,
-        background: shareError ? "#7f1d1d" : "#3b82f6",
-        color: "#fff", border: "none",
+        background: shareError ? "#fee2e2" : "#3b82f6",
+        color: shareError ? "#991b1b" : "#fff",
+        border: "2px solid #0a0a0a",
         opacity: shareLoading ? 0.7 : 1,
         ...extraStyle,
       }}>
-      {shareLoading ? "Skapar länk…" : shareError ? <><AlertTriangle size={14} /> Fel: {shareError}</> : <><Link2 size={14} /> Dela kort länk</>}
+      {shareLoading ? "Skapar länk…" : shareError ? <><AlertTriangle size={14} /> Fel: {shareError}</> : <><Link2 size={14} /> Dela kortlänk</>}
     </button>
   );
 
@@ -950,6 +946,16 @@ export default function App() {
     return m;
   };
 
+  /* GK-only minutes per player, so fairness can look at outfield time alone
+     and not flag an imbalance that's caused by a locked-in goalkeeper. */
+  const calcGKMins = () => {
+    if (!plan) return {};
+    const FULL = settings.duration;
+    const g = Object.fromEntries(players.map(p => [p.id, 0]));
+    plan.forEach(({ gk }) => { if (gk) g[gk] = (g[gk] ?? 0) + FULL; });
+    return g;
+  };
+
   const calcPositionStats = () => {
     if (!plan) return {};
     const stats = Object.fromEntries(
@@ -968,6 +974,7 @@ export default function App() {
   };
 
   const mins = calcMins();
+  const gkMins = calcGKMins();
   const posStats = calcPositionStats();
   const totalPossible = settings.periods * settings.duration;
 
@@ -1199,13 +1206,20 @@ export default function App() {
           <div
             onClick={e => { e.stopPropagation(); resetAll(); }}
             title="Klicka för att återställa allt"
-            style={{ fontSize: "clamp(20px, 6vw, 26px)", color: "#0a0a0a", lineHeight: 1, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 10, fontWeight: 700, letterSpacing: "-0.02em" }}
+            style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: 22, color: "#0a0a0a", lineHeight: 1, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 1, fontWeight: 800, letterSpacing: "-0.03em" }}
           >
-            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, background: "#0a0a0a", borderRadius: 8 }}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="3.5" stroke="#fff" strokeWidth="1.8"/></svg>
-            </span>
+            {/* Stoppur — svart solid kropp, vit prickmitt, gul visare.
+                viewBox centrerad kring cirkeln (12,12) så align-items:center
+                lägger cirkelns mitt på textens optiska mitt. */}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ marginRight: 2 }}>
+              <circle cx="12" cy="12" r="7.5" fill="#0a0a0a"/>
+              <rect x="9.5" y="0" width="5" height="3" rx="0.5" fill="#0a0a0a"/>
+              <line x1="12" y1="3" x2="12" y2="4.5" stroke="#0a0a0a" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="12" y1="12" x2="15.5" y2="8.5" stroke="#facc15" strokeWidth="2.3" strokeLinecap="round"/>
+              <circle cx="12" cy="12" r="1.2" fill="#ffffff"/>
+            </svg>
             Speltid
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.55em", color: "#0a0a0a", background: "#facc15", padding: "2px 8px", borderRadius: 4, letterSpacing: "0.04em", fontWeight: 700, border: "1.5px solid #0a0a0a" }}>{settings.format}</span>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#0a0a0a", background: "#facc15", padding: "2px 8px", borderRadius: 4, letterSpacing: "0.04em", fontWeight: 700, border: "1.5px solid #0a0a0a", marginLeft: 8 }}>{settings.format}</span>
           </div>
         </div>
         <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#525252", marginTop: 6, lineHeight: 1.6, letterSpacing: "0.02em" }}>
@@ -1231,12 +1245,153 @@ export default function App() {
         {/* ═══ PLAYERS TAB ═══ */}
         {tab === "players" && (
           <div>
-            <div style={{ fontSize: 12, color: "#525252", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>
-              Tryck för att redigera · MV = Målvakt
+
+            {/* Settings — moved to the top so match format/duration is decided before entering players */}
+            <div style={{ ...S.card, padding: "14px" }}>
+              <div style={{ fontSize: 12, color: "#525252", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
+                Matchinställningar
+              </div>
+
+              {/* Team names */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ color: "#404040", fontSize: 14, display: "block", marginBottom: 6 }}>Hemmalag</span>
+                  <input id="home-team-input" value={homeTeam} onChange={e => setHomeTeam(e.target.value)} placeholder="Lagnamn"
+                    onKeyDown={e => { if (e.key === "Tab" && !e.shiftKey) { e.preventDefault(); document.getElementById("away-team-input")?.focus(); } }}
+                    style={{ width: "100%", background: "#ffffff", border: "1.5px solid #0a0a0a", borderRadius: 7, color: "#0a0a0a", fontSize: 14, outline: "none", padding: "7px 9px", boxSizing: "border-box" }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ color: "#404040", fontSize: 14, display: "block", marginBottom: 6 }}>Bortalag</span>
+                  <input id="away-team-input" value={awayTeam} onChange={e => setAwayTeam(e.target.value)} placeholder="Lagnamn"
+                    style={{ width: "100%", background: "#ffffff", border: "1.5px solid #0a0a0a", borderRadius: 7, color: "#0a0a0a", fontSize: 14, outline: "none", padding: "7px 9px", boxSizing: "border-box" }} />
+                </div>
+              </div>
+
+              {/* Format selector */}
+              <div style={{ marginBottom: 12 }}>
+                <span style={{ color: "#404040", fontSize: 14, display: "block", marginBottom: 8 }}>Spelform</span>
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  {FORMATS.map(f => (
+                    <button key={f.key}
+                      onClick={() => setSettings(s => ({ ...s, format: f.key, formation: defaultFormationName(f.key), duration: FORMAT_DEFAULT_DURATION[f.key] ?? s.duration }))}
+                      style={{
+                        ...S.btn(settings.format === f.key ? "primary" : "secondary"),
+                        padding: "5px 12px", fontSize: 13,
+                      }}>
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+                {!FM[settings.format]?.hasGK && (
+                  <div style={{ fontSize: 11, color: "#737373", marginTop: 6 }}>
+                    Ej målvakt — alla spelare är utespelare
+                  </div>
+                )}
+              </div>
+
+              {/* Formation selector */}
+              {(() => {
+                const currentFmt = FM[settings.format] ?? FM["5v5"];
+                const formations = currentFmt.formations ?? [];
+                if (formations.length <= 1) return null;
+                const activeName = settings.formation ?? formations[0].name;
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    <span style={{ color: "#404040", fontSize: 14, display: "block", marginBottom: 8 }} title="Försvar – mittfält – anfall">Formation</span>
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                      {formations.map(fm => (
+                        <button key={fm.name}
+                          onClick={() => setSettings(s => ({ ...s, formation: fm.name }))}
+                          style={{
+                            ...S.btn(activeName === fm.name ? "primary" : "secondary"),
+                            padding: "5px 12px", fontSize: 13, fontVariantNumeric: "tabular-nums",
+                          }}>
+                          {fm.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+                <span style={{ flex: 1, color: "#404040", fontSize: 14 }}>Positioner</span>
+                <div style={{ display: "flex", gap: 5 }}>
+                  <button onClick={() => setSettings(s => ({ ...s, positions: true }))}
+                    style={{ ...S.btn(settings.positions !== false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
+                    Ja
+                  </button>
+                  <button onClick={() => setSettings(s => ({ ...s, positions: false }))}
+                    style={{ ...S.btn(settings.positions === false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
+                    Nej
+                  </button>
+                </div>
+              </div>
+
+              {settings.positions !== false && (
+                <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+                  <span style={{ flex: 1, color: "#404040", fontSize: 14, paddingRight: 8 }} title="Spelare som stannar mellan byten behåller sin position; bara nya spelare tar lediga platser">
+                    Behåll positioner inom period
+                  </span>
+                  <div style={{ display: "flex", gap: 5 }}>
+                    <button onClick={() => setSettings(s => ({ ...s, keepPositionsInPeriod: true }))}
+                      style={{ ...S.btn(settings.keepPositionsInPeriod !== false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
+                      Ja
+                    </button>
+                    <button onClick={() => setSettings(s => ({ ...s, keepPositionsInPeriod: false }))}
+                      style={{ ...S.btn(settings.keepPositionsInPeriod === false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
+                      Nej
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {[
+                ["periods",  "Perioder",      1, 6],
+                ["duration", "Min / period",  5, 30],
+                ["subs",     "Byten / period",0, 4],
+              ].map(([key, label, min, max]) => (
+                <div key={key} style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
+                  <span style={{ flex: 1, color: "#404040", fontSize: 14 }}>{label}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <button onClick={() => setSettings(s => ({ ...s, [key]: Math.max(min, s[key] - 1) }))}
+                      style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      −
+                    </button>
+                    <span style={{ fontSize: 17, fontWeight: 700, minWidth: 26, textAlign: "center", color: "#0a0a0a" }}>
+                      {settings[key]}
+                    </span>
+                    <button onClick={() => setSettings(s => ({ ...s, [key]: Math.min(max, s[key] + 1) }))}
+                      style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <div style={isDesktop ? { display: "grid", gridTemplateColumns: "1fr 360px", gap: 24, alignItems: "start" } : {}}>
-            <div>
+            {/* Legend — explains the preference icons so players below are self-explanatory */}
+            {settings.positions !== false && (
+              <div style={{ ...S.card, padding: "10px 14px" }}>
+                <div style={{ fontSize: 12, color: "#525252", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Preferenser</div>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {PREFS.map(pr => (
+                    <div key={pr.key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <pr.Icon size={14} color={pr.color} />
+                      <span style={{ fontSize: 12, color: pr.color }}>{pr.label}</span>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <span style={{ fontSize: 11, background: GK_COLOR, color: "#ffffff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
+                    <span style={{ fontSize: 12, color: GK_COLOR }}>Målvakt</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ fontSize: 12, color: "#525252", marginTop: 20, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>
+              Spelare · tryck för att redigera · MV = Målvakt
+            </div>
 
             {players.map((p, i) => (
               <div
@@ -1385,152 +1540,6 @@ export default function App() {
               </button>
             </div>
 
-            </div>
-            <div>
-
-            {/* Legend */}
-            {settings.positions !== false && (
-              <div style={{ ...S.card, padding: "10px 14px", marginBottom: 16 }}>
-                <div style={{ fontSize: 12, color: "#525252", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Preferenser</div>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  {PREFS.map(pr => (
-                    <div key={pr.key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                      <pr.Icon size={14} color={pr.color} />
-                      <span style={{ fontSize: 12, color: pr.color }}>{pr.label}</span>
-                    </div>
-                  ))}
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ fontSize: 11, background: GK_COLOR, color: "#ffffff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
-                    <span style={{ fontSize: 12, color: GK_COLOR }}>Målvakt</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Settings */}
-            <div style={{ ...S.card, padding: "14px" }}>
-              <div style={{ fontSize: 12, color: "#525252", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
-                Matchinställningar
-              </div>
-
-              {/* Team names */}
-              <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ color: "#404040", fontSize: 14, display: "block", marginBottom: 6 }}>Hemmalag</span>
-                  <input id="home-team-input" value={homeTeam} onChange={e => setHomeTeam(e.target.value)} placeholder="Lagnamn"
-                    onKeyDown={e => { if (e.key === "Tab" && !e.shiftKey) { e.preventDefault(); document.getElementById("away-team-input")?.focus(); } }}
-                    style={{ width: "100%", background: "#ffffff", border: "1.5px solid #0a0a0a", borderRadius: 7, color: "#0a0a0a", fontSize: 14, outline: "none", padding: "7px 9px", boxSizing: "border-box" }} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ color: "#404040", fontSize: 14, display: "block", marginBottom: 6 }}>Bortalag</span>
-                  <input id="away-team-input" value={awayTeam} onChange={e => setAwayTeam(e.target.value)} placeholder="Lagnamn"
-                    style={{ width: "100%", background: "#ffffff", border: "1.5px solid #0a0a0a", borderRadius: 7, color: "#0a0a0a", fontSize: 14, outline: "none", padding: "7px 9px", boxSizing: "border-box" }} />
-                </div>
-              </div>
-
-              {/* Format selector */}
-              <div style={{ marginBottom: 12 }}>
-                <span style={{ color: "#404040", fontSize: 14, display: "block", marginBottom: 8 }}>Spelform</span>
-                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                  {FORMATS.map(f => (
-                    <button key={f.key}
-                      onClick={() => setSettings(s => ({ ...s, format: f.key, formation: defaultFormationName(f.key), duration: FORMAT_DEFAULT_DURATION[f.key] ?? s.duration }))}
-                      style={{
-                        ...S.btn(settings.format === f.key ? "primary" : "secondary"),
-                        padding: "5px 12px", fontSize: 13,
-                      }}>
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-                {!FM[settings.format]?.hasGK && (
-                  <div style={{ fontSize: 11, color: "#737373", marginTop: 6 }}>
-                    Ej målvakt — alla spelare är utespelare
-                  </div>
-                )}
-              </div>
-
-              {/* Formation selector */}
-              {(() => {
-                const currentFmt = FM[settings.format] ?? FM["5v5"];
-                const formations = currentFmt.formations ?? [];
-                if (formations.length <= 1) return null;
-                const activeName = settings.formation ?? formations[0].name;
-                return (
-                  <div style={{ marginBottom: 16 }}>
-                    <span style={{ color: "#404040", fontSize: 14, display: "block", marginBottom: 8 }} title="Försvar – mittfält – anfall">Formation</span>
-                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                      {formations.map(fm => (
-                        <button key={fm.name}
-                          onClick={() => setSettings(s => ({ ...s, formation: fm.name }))}
-                          style={{
-                            ...S.btn(activeName === fm.name ? "primary" : "secondary"),
-                            padding: "5px 12px", fontSize: 13, fontVariantNumeric: "tabular-nums",
-                          }}>
-                          {fm.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-                <span style={{ flex: 1, color: "#404040", fontSize: 14 }}>Positioner</span>
-                <div style={{ display: "flex", gap: 5 }}>
-                  <button onClick={() => setSettings(s => ({ ...s, positions: true }))}
-                    style={{ ...S.btn(settings.positions !== false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
-                    Ja
-                  </button>
-                  <button onClick={() => setSettings(s => ({ ...s, positions: false }))}
-                    style={{ ...S.btn(settings.positions === false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
-                    Nej
-                  </button>
-                </div>
-              </div>
-
-              {settings.positions !== false && (
-                <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-                  <span style={{ flex: 1, color: "#404040", fontSize: 14, paddingRight: 8 }} title="Spelare som stannar mellan byten behåller sin position; bara nya spelare tar lediga platser">
-                    Behåll positioner inom period
-                  </span>
-                  <div style={{ display: "flex", gap: 5 }}>
-                    <button onClick={() => setSettings(s => ({ ...s, keepPositionsInPeriod: true }))}
-                      style={{ ...S.btn(settings.keepPositionsInPeriod !== false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
-                      Ja
-                    </button>
-                    <button onClick={() => setSettings(s => ({ ...s, keepPositionsInPeriod: false }))}
-                      style={{ ...S.btn(settings.keepPositionsInPeriod === false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
-                      Nej
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {[
-                ["periods",  "Perioder",      1, 6],
-                ["duration", "Min / period",  5, 30],
-                ["subs",     "Byten / period",0, 4],
-              ].map(([key, label, min, max]) => (
-                <div key={key} style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
-                  <span style={{ flex: 1, color: "#404040", fontSize: 14 }}>{label}</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <button onClick={() => setSettings(s => ({ ...s, [key]: Math.max(min, s[key] - 1) }))}
-                      style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      −
-                    </button>
-                    <span style={{ fontSize: 17, fontWeight: 700, minWidth: 26, textAlign: "center", color: "#facc15" }}>
-                      {settings[key]}
-                    </span>
-                    <button onClick={() => setSettings(s => ({ ...s, [key]: Math.min(max, s[key] + 1) }))}
-                      style={{ background: "#ffffff", border: "1.5px solid #0a0a0a", color: "#0a0a0a", borderRadius: 7, width: 30, height: 30, cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      +
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
             {/* Generate button */}
             <button onClick={doGenerate} style={{
               ...S.btn("primary"), width: "100%", marginTop: 16, padding: 15,
@@ -1545,8 +1554,6 @@ export default function App() {
             )}
             {renderShareControl({ marginTop: 8 })}
 
-            </div>
-            </div>
           </div>
         )}
 
@@ -1567,14 +1574,31 @@ export default function App() {
         {tab === "plan" && plan && (
           <div>
             {sel && (
-              <div style={{
-                borderRadius: 9, padding: "9px 14px", marginBottom: 12, fontSize: 12, textAlign: "center",
-                background: "#fff7ed", color: "#9a3412", border: "1.5px solid #0a0a0a",
-              }}>
-                Markerat <strong>{(() => { const p = getP(sel.id); return p ? displayName(p) : ""; })()}</strong> i period {sel.periodIdx + 1} — tryck på en annan spelare i samma period för att byta.
+              <div
+                onClick={e => { e.stopPropagation(); setSel(null); }}
+                style={{
+                  position: "fixed", bottom: 20, left: "50%",
+                  transform: "translateX(-50%)",
+                  zIndex: 90,
+                  maxWidth: "calc(100vw - 32px)",
+                  borderRadius: 10,
+                  padding: "10px 14px 10px 16px",
+                  fontSize: 13,
+                  background: "#facc15",
+                  color: "#0a0a0a",
+                  border: "2px solid #0a0a0a",
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.2)",
+                  display: "flex", alignItems: "center", gap: 10,
+                  cursor: "pointer",
+                  fontWeight: 500,
+                }}
+              >
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 320 }}>
+                  Markerat <strong>{(() => { const p = getP(sel.id); return p ? displayName(p) : ""; })()}</strong> i period {sel.periodIdx + 1} · tryck på en annan spelare att byta med
+                </span>
+                <X size={16} style={{ flexShrink: 0 }} aria-label="Avmarkera" />
               </div>
             )}
-            <div style={{ marginBottom: 16 }} />
 
             {/* ─── Timer ─── */}
             {(() => {
@@ -1981,8 +2005,8 @@ export default function App() {
                       ...S.btn("secondary"),
                       padding: "6px 10px", fontSize: 12, flexShrink: 0,
                       background: justShuffled ? "#facc15" : "#ffffff",
-                      color: justShuffled ? "#ffffff" : "#facc15",
-                      transition: "background 0.2s, color 0.2s",
+                      color: "#0a0a0a",
+                      transition: "background 0.2s",
                     }}>
                     <Shuffle size={13} /> {justShuffled ? "Slumpat!" : "Slumpa"}
                   </button>
@@ -2056,13 +2080,16 @@ export default function App() {
                   );
                 })}
 
-              {/* Fairness score */}
+              {/* Fairness score — based on OUTFIELD minutes so a locked-in
+                  goalkeeper doesn't skew the result. Pure GKs (0 outfield min)
+                  are excluded; their extra time is unavoidable. */}
               {(() => {
-                const vals = activePlayers.map(p => mins[p.id] ?? 0);
-                const sum = vals.reduce((a, b) => a + b, 0);
-                const avg = sum / vals.length;
-                const maxDiff = Math.max(...vals.map(v => Math.abs(v - avg)));
-                const fair = maxDiff <= settings.duration / 2;
+                const outfieldVals = activePlayers
+                  .map(p => (mins[p.id] ?? 0) - (gkMins[p.id] ?? 0))
+                  .filter(v => v > 0);
+                if (outfieldVals.length < 2) return null;
+                const spread = Math.max(...outfieldVals) - Math.min(...outfieldVals);
+                const fair = spread <= settings.duration / 2;
                 return (
                   <div style={{
                     marginTop: 12, padding: "8px 12px", borderRadius: 8,
@@ -2074,7 +2101,7 @@ export default function App() {
                   }}>
                     {fair
                       ? <><Check size={12} /> Speltiden är jämnt fördelad</>
-                      : <><AlertTriangle size={12} /> Max skillnad: {Math.round(maxDiff)} min — byt runt för bättre balans</>
+                      : <><AlertTriangle size={12} /> Spelartid skiljer {Math.round(spread)} min — Slumpa för bättre balans</>
                     }
                   </div>
                 );
