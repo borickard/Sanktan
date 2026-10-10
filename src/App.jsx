@@ -759,6 +759,9 @@ export default function App() {
     setTimerElapsed(0);
     setTimerPeriod(0);
     try { localStorage.removeItem("sanktan-timer-v1"); } catch {}
+    /* Jump to the top so the user starts at Period 1 + the timer card
+       rather than wherever the Spelare scroll position left them. */
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   const doReset = () => {
