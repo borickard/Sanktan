@@ -1322,19 +1322,25 @@ export default function App() {
                 );
               })()}
 
-              <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-                <span style={{ flex: 1, color: "#404040", fontSize: 14 }}>Positioner</span>
-                <div style={{ display: "flex", gap: 5 }}>
-                  <button onClick={() => setSettings(s => ({ ...s, positions: true }))}
-                    style={{ ...S.btn(settings.positions !== false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
-                    Ja
-                  </button>
-                  <button onClick={() => setSettings(s => ({ ...s, positions: false }))}
-                    style={{ ...S.btn(settings.positions === false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
-                    Nej
-                  </button>
+              {/* The Positioner toggle only matters when the format has
+                  distinct positions (5v5 and up). 3v3 is played with free
+                  rotation across the whole pitch, so the toggle is hidden
+                  and the setting is pinned to false by FORMAT_DEFAULTS. */}
+              {fmt.hasGK && (
+                <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+                  <span style={{ flex: 1, color: "#404040", fontSize: 14 }}>Positioner</span>
+                  <div style={{ display: "flex", gap: 5 }}>
+                    <button onClick={() => setSettings(s => ({ ...s, positions: true }))}
+                      style={{ ...S.btn(settings.positions !== false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
+                      Ja
+                    </button>
+                    <button onClick={() => setSettings(s => ({ ...s, positions: false }))}
+                      style={{ ...S.btn(settings.positions === false ? "primary" : "secondary"), padding: "5px 12px", fontSize: 13 }}>
+                      Nej
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {settings.positions !== false && (
                 <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
