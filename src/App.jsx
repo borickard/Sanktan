@@ -1904,21 +1904,21 @@ export default function App() {
                     outlineOffset: 2,
                   }}>
 
-                    {/* Period header — only the chevron + "Period N" label
-                        toggles collapse so accidental taps on the segment
-                        tabs (or even empty space) don't fold the period. */}
+                    {/* Period header — whole bar toggles collapse. The
+                        segment-tab buttons stopPropagation so tapping 1/2
+                        doesn't fold the period. */}
                     <div
+                      onClick={() => togglePeriod(i)}
+                      title={collapsedPeriods.has(i) ? "Expandera period" : "Komprimera period"}
                       style={{
                         background: "#ffffff",
                         padding: "10px 14px",
                         display: "flex", justifyContent: "space-between", alignItems: "center",
                         borderBottom: collapsedPeriods.has(i) ? "none" : "2px solid #0a0a0a",
                         userSelect: "none",
+                        cursor: "pointer",
                       }}>
-                      <div
-                        onClick={() => togglePeriod(i)}
-                        title={collapsedPeriods.has(i) ? "Expandera period" : "Komprimera period"}
-                        style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{
                           background: timerPeriod === i ? "#facc15" : "#ffffff",
                           color: "#0a0a0a", fontSize: 10, fontWeight: 700,
@@ -2017,18 +2017,16 @@ export default function App() {
                 <div style={{ fontFamily: "'Space Grotesk'", fontSize: 20, letterSpacing: 2, color: "#737373" }}>
                   Speltid — {totalPossible} min totalt
                 </div>
-                {settings.positions !== false && (
-                  <button onClick={doShuffle} title="Slumpa positionerna"
-                    style={{
-                      ...S.btn("secondary"),
-                      padding: "6px 10px", fontSize: 12, flexShrink: 0,
-                      background: justShuffled ? "#facc15" : "#ffffff",
-                      color: "#0a0a0a",
-                      transition: "background 0.2s",
-                    }}>
-                    <Shuffle size={13} /> {justShuffled ? "Slumpat!" : "Slumpa"}
-                  </button>
-                )}
+                <button onClick={doShuffle} title={settings.positions !== false ? "Slumpa positionerna" : "Slumpa spelrotationen"}
+                  style={{
+                    ...S.btn("secondary"),
+                    padding: "6px 10px", fontSize: 12, flexShrink: 0,
+                    background: justShuffled ? "#facc15" : "#ffffff",
+                    color: "#0a0a0a",
+                    transition: "background 0.2s",
+                  }}>
+                  <Shuffle size={13} /> {justShuffled ? "Slumpat!" : "Slumpa"}
+                </button>
               </div>
               {[...activePlayers]
                 .sort((a, b) => (mins[b.id] ?? 0) - (mins[a.id] ?? 0))
@@ -2036,7 +2034,11 @@ export default function App() {
                   const m = mins[p.id] ?? 0;
                   const pct = totalPossible > 0 ? (m / totalPossible) * 100 : 0;
                   const pref = PM[p.pref];
-                  const barColor = p.isGK ? GK_COLOR : (pref?.color ?? "#737373");
+                  /* fmt.hasGK gates every "treat this player as MV" decision,
+                     so a left-over p.isGK flag from an earlier 5v5 state
+                     doesn't leak into a 3v3 overview. */
+                  const treatAsGK = p.isGK && fmt.hasGK;
+                  const barColor = treatAsGK ? GK_COLOR : (pref?.color ?? "#737373");
                   const textColor = pct >= 75 ? "#166534" : pct >= 45 ? "#9a3412" : "#991b1b";
 
                   const ps = posStats[p.id] ?? {};
@@ -2053,7 +2055,7 @@ export default function App() {
                     <div key={p.id} style={{ marginBottom: 12 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          {p.isGK
+                          {treatAsGK
                             ? <span style={{ fontSize: 11, background: GK_COLOR, color: "#ffffff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
                             : showPositions && pref && <pref.Icon size={12} color={pref.color} />
                           }
@@ -2107,7 +2109,16 @@ export default function App() {
                   .filter(v => v > 0);
                 if (outfieldVals.length < 2) return null;
                 const spread = Math.max(...outfieldVals) - Math.min(...outfieldVals);
-                const fair = spread <= settings.duration / 2;
+                /* The smallest spread a shuffle can achieve is one segment
+                   (= duration / segmentsPerPeriod) — someone will play one
+                   more segment than someone else whenever the total slot
+                   count doesn't divide evenly among the outfield players.
+                   Treat the plan as fair whenever the current spread is at
+                   that unavoidable minimum, so a 3v3 overview with 5 or 6
+                   players stops telling the coach to "Slumpa för bättre
+                   balans" when no better split exists. */
+                const segMin = settings.duration / ((settings.subs ?? 0) + 1);
+                const fair = spread <= segMin + 0.01;
                 return (
                   <div style={{
                     marginTop: 12, padding: "8px 12px", borderRadius: 8,
