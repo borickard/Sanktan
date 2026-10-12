@@ -1904,21 +1904,21 @@ export default function App() {
                     outlineOffset: 2,
                   }}>
 
-                    {/* Period header — only the chevron + "Period N" label
-                        toggles collapse so accidental taps on the segment
-                        tabs (or even empty space) don't fold the period. */}
+                    {/* Period header — whole bar toggles collapse. The
+                        segment-tab buttons stopPropagation so tapping 1/2
+                        doesn't fold the period. */}
                     <div
+                      onClick={() => togglePeriod(i)}
+                      title={collapsedPeriods.has(i) ? "Expandera period" : "Komprimera period"}
                       style={{
                         background: "#ffffff",
                         padding: "10px 14px",
                         display: "flex", justifyContent: "space-between", alignItems: "center",
                         borderBottom: collapsedPeriods.has(i) ? "none" : "2px solid #0a0a0a",
                         userSelect: "none",
+                        cursor: "pointer",
                       }}>
-                      <div
-                        onClick={() => togglePeriod(i)}
-                        title={collapsedPeriods.has(i) ? "Expandera period" : "Komprimera period"}
-                        style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{
                           background: timerPeriod === i ? "#facc15" : "#ffffff",
                           color: "#0a0a0a", fontSize: 10, fontWeight: 700,
@@ -2036,7 +2036,11 @@ export default function App() {
                   const m = mins[p.id] ?? 0;
                   const pct = totalPossible > 0 ? (m / totalPossible) * 100 : 0;
                   const pref = PM[p.pref];
-                  const barColor = p.isGK ? GK_COLOR : (pref?.color ?? "#737373");
+                  /* fmt.hasGK gates every "treat this player as MV" decision,
+                     so a left-over p.isGK flag from an earlier 5v5 state
+                     doesn't leak into a 3v3 overview. */
+                  const treatAsGK = p.isGK && fmt.hasGK;
+                  const barColor = treatAsGK ? GK_COLOR : (pref?.color ?? "#737373");
                   const textColor = pct >= 75 ? "#166534" : pct >= 45 ? "#9a3412" : "#991b1b";
 
                   const ps = posStats[p.id] ?? {};
@@ -2053,7 +2057,7 @@ export default function App() {
                     <div key={p.id} style={{ marginBottom: 12 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          {p.isGK
+                          {treatAsGK
                             ? <span style={{ fontSize: 11, background: GK_COLOR, color: "#ffffff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
                             : showPositions && pref && <pref.Icon size={12} color={pref.color} />
                           }
