@@ -58,9 +58,17 @@ const defaultFormationName = fmtKey => {
   const fmt = FORMATS.find(f => f.key === fmtKey);
   return fmt?.formations[0]?.name ?? null;
 };
-/* Per-format default period length in minutes — applied when the user
-   picks a format, matching common youth-football norms in Sweden. */
-const FORMAT_DEFAULT_DURATION = { "3v3": 12, "5v5": 15, "7v7": 20 };
+/* Per-format setting defaults — applied when the user picks a format,
+   matching the SvFF Nationella spelformer (youth-football norms):
+    - 3v3 (U6–U8): 4×3 min, no mid-period subs, no goalkeeper, free
+      positions (everyone plays everywhere)
+    - 5v5 (U9–U10): 3×15 min, 1 sub per period, positions enabled
+    - 7v7 (U11–U13): 3×20 min, 1 sub per period, positions enabled */
+const FORMAT_DEFAULTS = {
+  "3v3": { duration: 3,  periods: 4, subs: 0, positions: false },
+  "5v5": { duration: 15, periods: 3, subs: 1, positions: true  },
+  "7v7": { duration: 20, periods: 3, subs: 1, positions: true  },
+};
 const FM = Object.fromEntries(FORMATS.map(f => [f.key, f]));
 /* Merge format (hasGK, total, label) with the chosen formation (att, mid, def). */
 const getFmt = (settings) => {
@@ -1273,7 +1281,7 @@ export default function App() {
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                   {FORMATS.map(f => (
                     <button key={f.key}
-                      onClick={() => setSettings(s => ({ ...s, format: f.key, formation: defaultFormationName(f.key), duration: FORMAT_DEFAULT_DURATION[f.key] ?? s.duration }))}
+                      onClick={() => setSettings(s => ({ ...s, format: f.key, formation: defaultFormationName(f.key), ...(FORMAT_DEFAULTS[f.key] ?? {}) }))}
                       style={{
                         ...S.btn(settings.format === f.key ? "primary" : "secondary"),
                         padding: "5px 12px", fontSize: 13,
@@ -1381,16 +1389,18 @@ export default function App() {
                       <span style={{ fontSize: 12, color: pr.color }}>{pr.label}</span>
                     </div>
                   ))}
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ fontSize: 11, background: GK_COLOR, color: "#ffffff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
-                    <span style={{ fontSize: 12, color: GK_COLOR }}>Målvakt</span>
-                  </div>
+                  {fmt.hasGK && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ fontSize: 11, background: GK_COLOR, color: "#ffffff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
+                      <span style={{ fontSize: 12, color: GK_COLOR }}>Målvakt</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
             <div style={{ fontSize: 12, color: "#525252", marginTop: 20, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>
-              Spelare · tryck för att redigera · MV = Målvakt
+              Spelare · tryck för att redigera{fmt.hasGK ? " · MV = Målvakt" : ""}
             </div>
 
             {players.map((p, i) => (
@@ -1483,11 +1493,13 @@ export default function App() {
                   style={{ flex: 1, minWidth: 0, background: "#ffffff", border: "1.5px solid #0a0a0a", borderRadius: 6, color: "#0a0a0a", fontSize: 15, fontWeight: 500, outline: "none", padding: "3px 7px" }}
                 />
 
-                <button
-                  onClick={() => updP(p.id, "isGK", !p.isGK)}
-                  style={{ ...S.btn(p.isGK ? "primary" : "ghost"), padding: "3px 8px", fontSize: 12, borderRadius: 6, border: p.isGK ? "none" : "1.5px solid #0a0a0a" }}>
-                  MV
-                </button>
+                {fmt.hasGK && (
+                  <button
+                    onClick={() => updP(p.id, "isGK", !p.isGK)}
+                    style={{ ...S.btn(p.isGK ? "primary" : "ghost"), padding: "3px 8px", fontSize: 12, borderRadius: 6, border: p.isGK ? "none" : "1.5px solid #0a0a0a" }}>
+                    MV
+                  </button>
+                )}
 
                 {settings.positions !== false && (
                   <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
