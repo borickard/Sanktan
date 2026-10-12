@@ -2109,7 +2109,16 @@ export default function App() {
                   .filter(v => v > 0);
                 if (outfieldVals.length < 2) return null;
                 const spread = Math.max(...outfieldVals) - Math.min(...outfieldVals);
-                const fair = spread <= settings.duration / 2;
+                /* The smallest spread a shuffle can achieve is one segment
+                   (= duration / segmentsPerPeriod) — someone will play one
+                   more segment than someone else whenever the total slot
+                   count doesn't divide evenly among the outfield players.
+                   Treat the plan as fair whenever the current spread is at
+                   that unavoidable minimum, so a 3v3 overview with 5 or 6
+                   players stops telling the coach to "Slumpa för bättre
+                   balans" when no better split exists. */
+                const segMin = settings.duration / ((settings.subs ?? 0) + 1);
+                const fair = spread <= segMin + 0.01;
                 return (
                   <div style={{
                     marginTop: 12, padding: "8px 12px", borderRadius: 8,
