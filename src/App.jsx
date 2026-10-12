@@ -2017,18 +2017,16 @@ export default function App() {
                 <div style={{ fontFamily: "'Space Grotesk'", fontSize: 20, letterSpacing: 2, color: "#737373" }}>
                   Speltid — {totalPossible} min totalt
                 </div>
-                {settings.positions !== false && (
-                  <button onClick={doShuffle} title="Slumpa positionerna"
-                    style={{
-                      ...S.btn("secondary"),
-                      padding: "6px 10px", fontSize: 12, flexShrink: 0,
-                      background: justShuffled ? "#facc15" : "#ffffff",
-                      color: "#0a0a0a",
-                      transition: "background 0.2s",
-                    }}>
-                    <Shuffle size={13} /> {justShuffled ? "Slumpat!" : "Slumpa"}
-                  </button>
-                )}
+                <button onClick={doShuffle} title={settings.positions !== false ? "Slumpa positionerna" : "Slumpa spelrotationen"}
+                  style={{
+                    ...S.btn("secondary"),
+                    padding: "6px 10px", fontSize: 12, flexShrink: 0,
+                    background: justShuffled ? "#facc15" : "#ffffff",
+                    color: "#0a0a0a",
+                    transition: "background 0.2s",
+                  }}>
+                  <Shuffle size={13} /> {justShuffled ? "Slumpat!" : "Slumpa"}
+                </button>
               </div>
               {[...activePlayers]
                 .sort((a, b) => (mins[b.id] ?? 0) - (mins[a.id] ?? 0))
