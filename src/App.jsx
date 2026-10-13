@@ -398,6 +398,16 @@ export default function App() {
   const [plan, setPlan]         = useState(() => initFromURL ? generatePlan(initFromURL.players.filter(p => p.enabled !== false), initFromURL.settings) : null);
   const [originalPlan, setOriginalPlan] = useState(() => initFromURL ? generatePlan(initFromURL.players.filter(p => p.enabled !== false), initFromURL.settings) : null);
   const [sel, setSel]           = useState(null);
+  /* Draft name while a chip is marked. Writes to the real player state
+     only when the user confirms (check button or Enter), so an edit can
+     be undone with the cancel button or Escape. */
+  const [draftName, setDraftName] = useState("");
+  useEffect(() => {
+    if (!sel) return;
+    const p = players.find(x => x.id === sel.id);
+    setDraftName(p?.name ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sel?.id]);
   const [copied, setCopied] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied,  setShareCopied]  = useState(false);
@@ -1591,32 +1601,94 @@ export default function App() {
 
         {tab === "plan" && plan && (
           <div>
-            {sel && (
-              <div
-                onClick={e => { e.stopPropagation(); setSel(null); }}
-                style={{
-                  position: "fixed", bottom: 20, left: "50%",
-                  transform: "translateX(-50%)",
-                  zIndex: 90,
-                  maxWidth: "calc(100vw - 32px)",
-                  borderRadius: 10,
-                  padding: "10px 14px 10px 16px",
-                  fontSize: 13,
-                  background: "#facc15",
-                  color: "#0a0a0a",
-                  border: "2px solid #0a0a0a",
-                  boxShadow: "0 6px 20px rgba(0,0,0,0.2)",
-                  display: "flex", alignItems: "center", gap: 10,
-                  cursor: "pointer",
-                  fontWeight: 500,
-                }}
-              >
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 320 }}>
-                  Markerat <strong>{(() => { const p = getP(sel.id); return p ? displayName(p) : ""; })()}</strong> i period {sel.periodIdx + 1} · tryck på en annan spelare att byta med
-                </span>
-                <X size={16} style={{ flexShrink: 0 }} aria-label="Avmarkera" />
-              </div>
-            )}
+            {sel && (() => {
+              const selP = getP(sel.id);
+              const selIdx = selP ? players.findIndex(x => x.id === sel.id) : -1;
+              const savedName = selP?.name ?? "";
+              const isDirty = selP != null && draftName !== savedName;
+              const commit = () => { if (isDirty) updP(sel.id, "name", draftName); };
+              const revert = () => { setDraftName(savedName); };
+              const iconBtn = (color = "#0a0a0a") => ({
+                background: "#ffffff", color,
+                border: `1.5px solid ${color}`,
+                borderRadius: 6, width: 28, height: 28,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", flexShrink: 0, padding: 0,
+              });
+              return (
+                <div
+                  onClick={e => { e.stopPropagation(); setSel(null); }}
+                  style={{
+                    position: "fixed", bottom: 20, left: "50%",
+                    transform: "translateX(-50%)",
+                    zIndex: 90,
+                    width: "calc(100vw - 32px)", maxWidth: 460,
+                    borderRadius: 10,
+                    padding: "10px 10px 10px 14px",
+                    fontSize: 13,
+                    background: "#facc15",
+                    color: "#0a0a0a",
+                    border: "2px solid #0a0a0a",
+                    boxShadow: "0 6px 20px rgba(0,0,0,0.2)",
+                    display: "flex", alignItems: "center", gap: 8,
+                    cursor: "pointer",
+                    fontWeight: 500,
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <span style={{ flexShrink: 0 }}>Markerat</span>
+                  {selP && (
+                    <input
+                      value={draftName}
+                      placeholder={selIdx >= 0 ? `Spelare ${selIdx + 1}` : "Namn"}
+                      onChange={e => setDraftName(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      onFocus={e => e.target.select()}
+                      onKeyDown={e => {
+                        e.stopPropagation();
+                        if (e.key === "Enter") { commit(); e.target.blur(); }
+                        if (e.key === "Escape") { revert(); e.target.blur(); }
+                      }}
+                      title="Byt namn på spelaren"
+                      style={{
+                        flex: "1 1 100px", minWidth: 60,
+                        fontSize: 13, fontWeight: 700, fontFamily: "inherit",
+                        color: "#0a0a0a",
+                        background: "#ffffff",
+                        border: "1.5px solid #0a0a0a",
+                        borderRadius: 6, padding: "3px 8px",
+                        outline: "none",
+                      }}
+                    />
+                  )}
+                  {isDirty ? (
+                    <>
+                      <button
+                        onClick={e => { e.stopPropagation(); commit(); }}
+                        title="Spara namn"
+                        aria-label="Spara"
+                        style={iconBtn("#166534")}>
+                        <Check size={16} />
+                      </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); revert(); }}
+                        title="Ångra ändring"
+                        aria-label="Ångra"
+                        style={iconBtn("#991b1b")}>
+                        <X size={16} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ flexShrink: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.02em" }}>
+                        P{sel.periodIdx + 1} · byt mot annan
+                      </span>
+                      <X size={16} style={{ flexShrink: 0 }} aria-label="Avmarkera" />
+                    </>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ─── Timer ─── */}
             {(() => {
