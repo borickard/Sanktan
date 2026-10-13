@@ -398,6 +398,16 @@ export default function App() {
   const [plan, setPlan]         = useState(() => initFromURL ? generatePlan(initFromURL.players.filter(p => p.enabled !== false), initFromURL.settings) : null);
   const [originalPlan, setOriginalPlan] = useState(() => initFromURL ? generatePlan(initFromURL.players.filter(p => p.enabled !== false), initFromURL.settings) : null);
   const [sel, setSel]           = useState(null);
+  /* Draft name while a chip is marked. Writes to the real player state
+     only when the user confirms (check button or Enter), so an edit can
+     be undone with the cancel button or Escape. */
+  const [draftName, setDraftName] = useState("");
+  useEffect(() => {
+    if (!sel) return;
+    const p = players.find(x => x.id === sel.id);
+    setDraftName(p?.name ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sel?.id]);
   const [copied, setCopied] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied,  setShareCopied]  = useState(false);
@@ -1594,6 +1604,17 @@ export default function App() {
             {sel && (() => {
               const selP = getP(sel.id);
               const selIdx = selP ? players.findIndex(x => x.id === sel.id) : -1;
+              const savedName = selP?.name ?? "";
+              const isDirty = selP != null && draftName !== savedName;
+              const commit = () => { if (isDirty) updP(sel.id, "name", draftName); };
+              const revert = () => { setDraftName(savedName); };
+              const iconBtn = (color = "#0a0a0a") => ({
+                background: "#ffffff", color,
+                border: `1.5px solid ${color}`,
+                borderRadius: 6, width: 28, height: 28,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", flexShrink: 0, padding: 0,
+              });
               return (
                 <div
                   onClick={e => { e.stopPropagation(); setSel(null); }}
@@ -1601,9 +1622,9 @@ export default function App() {
                     position: "fixed", bottom: 20, left: "50%",
                     transform: "translateX(-50%)",
                     zIndex: 90,
-                    width: "calc(100vw - 32px)", maxWidth: 440,
+                    width: "calc(100vw - 32px)", maxWidth: 460,
                     borderRadius: 10,
-                    padding: "10px 12px 10px 14px",
+                    padding: "10px 10px 10px 14px",
                     fontSize: 13,
                     background: "#facc15",
                     color: "#0a0a0a",
@@ -1618,14 +1639,15 @@ export default function App() {
                   <span style={{ flexShrink: 0 }}>Markerat</span>
                   {selP && (
                     <input
-                      value={selP.name}
+                      value={draftName}
                       placeholder={selIdx >= 0 ? `Spelare ${selIdx + 1}` : "Namn"}
-                      onChange={e => updP(sel.id, "name", e.target.value)}
+                      onChange={e => setDraftName(e.target.value)}
                       onClick={e => e.stopPropagation()}
                       onFocus={e => e.target.select()}
                       onKeyDown={e => {
                         e.stopPropagation();
-                        if (e.key === "Enter" || e.key === "Escape") e.target.blur();
+                        if (e.key === "Enter") { commit(); e.target.blur(); }
+                        if (e.key === "Escape") { revert(); e.target.blur(); }
                       }}
                       title="Byt namn på spelaren"
                       style={{
@@ -1639,10 +1661,31 @@ export default function App() {
                       }}
                     />
                   )}
-                  <span style={{ flexShrink: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.02em" }}>
-                    P{sel.periodIdx + 1} · byt mot annan
-                  </span>
-                  <X size={16} style={{ flexShrink: 0 }} aria-label="Avmarkera" />
+                  {isDirty ? (
+                    <>
+                      <button
+                        onClick={e => { e.stopPropagation(); commit(); }}
+                        title="Spara namn"
+                        aria-label="Spara"
+                        style={iconBtn("#166534")}>
+                        <Check size={16} />
+                      </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); revert(); }}
+                        title="Ångra ändring"
+                        aria-label="Ångra"
+                        style={iconBtn("#991b1b")}>
+                        <X size={16} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ flexShrink: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.02em" }}>
+                        P{sel.periodIdx + 1} · byt mot annan
+                      </span>
+                      <X size={16} style={{ flexShrink: 0 }} aria-label="Avmarkera" />
+                    </>
+                  )}
                 </div>
               );
             })()}
