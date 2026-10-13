@@ -1591,32 +1591,61 @@ export default function App() {
 
         {tab === "plan" && plan && (
           <div>
-            {sel && (
-              <div
-                onClick={e => { e.stopPropagation(); setSel(null); }}
-                style={{
-                  position: "fixed", bottom: 20, left: "50%",
-                  transform: "translateX(-50%)",
-                  zIndex: 90,
-                  maxWidth: "calc(100vw - 32px)",
-                  borderRadius: 10,
-                  padding: "10px 14px 10px 16px",
-                  fontSize: 13,
-                  background: "#facc15",
-                  color: "#0a0a0a",
-                  border: "2px solid #0a0a0a",
-                  boxShadow: "0 6px 20px rgba(0,0,0,0.2)",
-                  display: "flex", alignItems: "center", gap: 10,
-                  cursor: "pointer",
-                  fontWeight: 500,
-                }}
-              >
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 320 }}>
-                  Markerat <strong>{(() => { const p = getP(sel.id); return p ? displayName(p) : ""; })()}</strong> i period {sel.periodIdx + 1} · tryck på en annan spelare att byta med
-                </span>
-                <X size={16} style={{ flexShrink: 0 }} aria-label="Avmarkera" />
-              </div>
-            )}
+            {sel && (() => {
+              const selP = getP(sel.id);
+              const selIdx = selP ? players.findIndex(x => x.id === sel.id) : -1;
+              return (
+                <div
+                  onClick={e => { e.stopPropagation(); setSel(null); }}
+                  style={{
+                    position: "fixed", bottom: 20, left: "50%",
+                    transform: "translateX(-50%)",
+                    zIndex: 90,
+                    width: "calc(100vw - 32px)", maxWidth: 440,
+                    borderRadius: 10,
+                    padding: "10px 12px 10px 14px",
+                    fontSize: 13,
+                    background: "#facc15",
+                    color: "#0a0a0a",
+                    border: "2px solid #0a0a0a",
+                    boxShadow: "0 6px 20px rgba(0,0,0,0.2)",
+                    display: "flex", alignItems: "center", gap: 8,
+                    cursor: "pointer",
+                    fontWeight: 500,
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <span style={{ flexShrink: 0 }}>Markerat</span>
+                  {selP && (
+                    <input
+                      value={selP.name}
+                      placeholder={selIdx >= 0 ? `Spelare ${selIdx + 1}` : "Namn"}
+                      onChange={e => updP(sel.id, "name", e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      onFocus={e => e.target.select()}
+                      onKeyDown={e => {
+                        e.stopPropagation();
+                        if (e.key === "Enter" || e.key === "Escape") e.target.blur();
+                      }}
+                      title="Byt namn på spelaren"
+                      style={{
+                        flex: "1 1 100px", minWidth: 60,
+                        fontSize: 13, fontWeight: 700, fontFamily: "inherit",
+                        color: "#0a0a0a",
+                        background: "#ffffff",
+                        border: "1.5px solid #0a0a0a",
+                        borderRadius: 6, padding: "3px 8px",
+                        outline: "none",
+                      }}
+                    />
+                  )}
+                  <span style={{ flexShrink: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.02em" }}>
+                    P{sel.periodIdx + 1} · byt mot annan
+                  </span>
+                  <X size={16} style={{ flexShrink: 0 }} aria-label="Avmarkera" />
+                </div>
+              );
+            })()}
 
             {/* ─── Timer ─── */}
             {(() => {
@@ -2059,26 +2088,7 @@ export default function App() {
                             ? <span style={{ fontSize: 11, background: GK_COLOR, color: "#ffffff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
                             : showPositions && pref && <pref.Icon size={12} color={pref.color} />
                           }
-                          <input
-                            value={p.name}
-                            placeholder={`Spelare ${players.findIndex(x => x.id === p.id) + 1}`}
-                            onChange={e => updP(p.id, "name", e.target.value)}
-                            onFocus={e => e.target.select()}
-                            onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") e.target.blur(); }}
-                            onClick={e => e.stopPropagation()}
-                            title="Byt namn på spelaren"
-                            style={{
-                              fontSize: 13, color: "#404040", fontFamily: "inherit",
-                              background: "transparent", border: "1.5px solid transparent",
-                              borderRadius: 5, padding: "2px 6px", outline: "none",
-                              width: "100%", minWidth: 0, maxWidth: 180,
-                              cursor: "text",
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.border = "1.5px solid #d4d4d4"; }}
-                            onMouseLeave={e => { if (document.activeElement !== e.currentTarget) e.currentTarget.style.border = "1.5px solid transparent"; }}
-                            onBlur={e => { e.currentTarget.style.border = "1.5px solid transparent"; }}
-                            onFocusCapture={e => { e.currentTarget.style.border = "1.5px solid #0a0a0a"; }}
-                          />
+                          <span style={{ fontSize: 13, color: "#404040" }}>{displayName(p)}</span>
                         </div>
                         <span style={{ fontSize: 13, fontWeight: 700, color: textColor }}>
                           {Math.round(m)} min
