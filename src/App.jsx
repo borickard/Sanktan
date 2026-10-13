@@ -2059,7 +2059,26 @@ export default function App() {
                             ? <span style={{ fontSize: 11, background: GK_COLOR, color: "#ffffff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>MV</span>
                             : showPositions && pref && <pref.Icon size={12} color={pref.color} />
                           }
-                          <span style={{ fontSize: 13, color: "#404040" }}>{displayName(p)}</span>
+                          <input
+                            value={p.name}
+                            placeholder={`Spelare ${players.findIndex(x => x.id === p.id) + 1}`}
+                            onChange={e => updP(p.id, "name", e.target.value)}
+                            onFocus={e => e.target.select()}
+                            onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") e.target.blur(); }}
+                            onClick={e => e.stopPropagation()}
+                            title="Byt namn på spelaren"
+                            style={{
+                              fontSize: 13, color: "#404040", fontFamily: "inherit",
+                              background: "transparent", border: "1.5px solid transparent",
+                              borderRadius: 5, padding: "2px 6px", outline: "none",
+                              width: "100%", minWidth: 0, maxWidth: 180,
+                              cursor: "text",
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.border = "1.5px solid #d4d4d4"; }}
+                            onMouseLeave={e => { if (document.activeElement !== e.currentTarget) e.currentTarget.style.border = "1.5px solid transparent"; }}
+                            onBlur={e => { e.currentTarget.style.border = "1.5px solid transparent"; }}
+                            onFocusCapture={e => { e.currentTarget.style.border = "1.5px solid #0a0a0a"; }}
+                          />
                         </div>
                         <span style={{ fontSize: 13, fontWeight: 700, color: textColor }}>
                           {Math.round(m)} min
