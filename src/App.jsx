@@ -408,6 +408,11 @@ export default function App() {
     setDraftName(p?.name ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel?.id]);
+  /* Which two chips are mid-swap-animation and in which period, so only
+     the two actually-moved chips flash and chips of the same players in
+     other periods stay still. */
+  const [swapAnim, setSwapAnim] = useState(null);
+  const swapAnimTimer = useRef(null);
   const [copied, setCopied] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied,  setShareCopied]  = useState(false);
@@ -945,6 +950,12 @@ export default function App() {
         bench: period.bench.map(sw),
       };
     }));
+    /* Fire the swap-pulse on both chips in the affected period. The key
+       bumps on every swap so re-triggering the animation across quick
+       successive swaps still restarts it. */
+    if (swapAnimTimer.current) clearTimeout(swapAnimTimer.current);
+    setSwapAnim({ ids: new Set([a, b]), periodIdx: sel.periodIdx, key: Date.now() });
+    swapAnimTimer.current = setTimeout(() => setSwapAnim(null), 900);
     setSel(null);
   }, [sel]);
 
@@ -1005,6 +1016,7 @@ export default function App() {
     const isSelected = sel?.id === id;
     const isSel2nd = sel && sel.id !== id;
     const activeGK = p.isGK && inGKSlot;
+    const isSwapping = swapAnim?.ids?.has(id) && swapAnim?.periodIdx === periodIdx;
     /* flavor "out" = leaves at next switch, "in" = comes on at next switch. */
     const flavorBg     = flavor === "out" ? "#fee2e2" : flavor === "in" ? "#22c55e" : null;
     const flavorBorder = flavor === "out" ? "#ef4444" : flavor === "in" ? "#15803d" : null;
@@ -1012,6 +1024,7 @@ export default function App() {
 
     return (
       <div
+        key={isSwapping ? `swap-${swapAnim.key}-${id}` : id}
         onClick={e => { e.stopPropagation(); tapPlayer(id, periodIdx); }}
         style={{
           display: "inline-flex", alignItems: "center", gap: 5,
@@ -1031,6 +1044,7 @@ export default function App() {
           userSelect: "none", WebkitUserSelect: "none",
           opacity: isSel2nd ? 0.75 : 1,
           boxShadow: isSelected ? "0 0 0 3px rgba(250,204,21,0.35)" : "none",
+          animation: isSwapping ? "swap-pulse 0.85s ease-out" : undefined,
           whiteSpace: "nowrap",
         }}
       >
