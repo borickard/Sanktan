@@ -950,6 +950,19 @@ export default function App() {
         bench: period.bench.map(sw),
       };
     }));
+    /* Also swap the two players' slots in the master roster. The bench
+       row is rendered in roster order (activePlayers.filter(...)), so
+       without this an outgoing field player would re-appear in a wholly
+       different bench slot than the one the user just tapped. */
+    setPlayers(prev => {
+      const next = [...prev];
+      const ia = next.findIndex(p => p.id === a);
+      const ib = next.findIndex(p => p.id === b);
+      if (ia !== -1 && ib !== -1) {
+        [next[ia], next[ib]] = [next[ib], next[ia]];
+      }
+      return next;
+    });
     /* Fire the swap-pulse on both chips in the affected period. The key
        bumps on every swap so re-triggering the animation across quick
        successive swaps still restarts it. */
