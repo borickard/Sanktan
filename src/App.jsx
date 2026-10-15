@@ -583,11 +583,15 @@ export default function App() {
   }, [players, settings, homeTeam, awayTeam, homeScore, awayScore]);
 
   useEffect(() => {
+    /* Keep the address bar clean until a matchplan actually exists, so
+       half-filled rosters and tentative settings don't live in a URL
+       that would otherwise be stale the moment the coach taps Generera. */
+    if (!plan) return;
     try {
       window.history.replaceState(null, "", "?" + _enc(JSON.stringify(packURL({ players, settings, homeTeam, awayTeam, homeScore, awayScore }))));
     } catch {}
     setShareUrl(null);
-  }, [players, settings, homeTeam, awayTeam, homeScore, awayScore]);
+  }, [plan, players, settings, homeTeam, awayTeam, homeScore, awayScore]);
 
   useEffect(() => {
     document.title = homeTeam && awayTeam ? `${homeTeam} – ${awayTeam}` : homeTeam || awayTeam || "Laguppställning";
