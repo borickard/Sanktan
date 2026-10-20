@@ -2255,19 +2255,11 @@ export default function App() {
 
       <div style={{ padding: "24px 20px 28px", textAlign: "center", fontSize: 12, color: "#475569", lineHeight: 1.6 }}>
         Matchplaneraren är ett verktyg framtaget av{" "}
-        <a href="https://www.linkedin.com/in/rickardberggren/"
-          target="_blank" rel="noopener noreferrer"
-          style={{ color: "#0a0a0a", textDecoration: "underline", textUnderlineOffset: "2px", fontWeight: 600 }}>
+        <a href="https://halvlek.se/" rel="author"
+          style={{ color: "#0a0a0a", textDecoration: "none", fontWeight: 700, background: "#facc15", padding: "1px 6px", borderRadius: 3 }}>
           Rickard Berggren
         </a>
         , ledare i Mälarhöjden-Hägersten FF
-        <div style={{ fontSize: 11, color: "#737373", marginTop: 8 }}>
-          Ett projekt av{" "}
-          <a href="https://halvlek.se/" rel="author"
-            style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: "2px" }}>
-            Rickard Berggren
-          </a>
-        </div>
       </div>
     </div>
   );
