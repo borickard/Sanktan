@@ -583,11 +583,15 @@ export default function App() {
   }, [players, settings, homeTeam, awayTeam, homeScore, awayScore]);
 
   useEffect(() => {
+    /* Keep the address bar clean until a matchplan actually exists, so
+       half-filled rosters and tentative settings don't live in a URL
+       that would otherwise be stale the moment the coach taps Generera. */
+    if (!plan) return;
     try {
       window.history.replaceState(null, "", "?" + _enc(JSON.stringify(packURL({ players, settings, homeTeam, awayTeam, homeScore, awayScore }))));
     } catch {}
     setShareUrl(null);
-  }, [players, settings, homeTeam, awayTeam, homeScore, awayScore]);
+  }, [plan, players, settings, homeTeam, awayTeam, homeScore, awayScore]);
 
   useEffect(() => {
     document.title = homeTeam && awayTeam ? `${homeTeam} – ${awayTeam}` : homeTeam || awayTeam || "Laguppställning";
@@ -2253,10 +2257,17 @@ export default function App() {
         Matchplaneraren är ett verktyg framtaget av{" "}
         <a href="https://www.linkedin.com/in/rickardberggren/"
           target="_blank" rel="noopener noreferrer"
-          style={{ color: "#facc15", textDecoration: "none", fontWeight: 600 }}>
+          style={{ color: "#0a0a0a", textDecoration: "underline", textUnderlineOffset: "2px", fontWeight: 600 }}>
           Rickard Berggren
         </a>
         , ledare i Mälarhöjden-Hägersten FF
+        <div style={{ fontSize: 11, color: "#737373", marginTop: 8 }}>
+          Ett projekt av{" "}
+          <a href="https://halvlek.se/" rel="author"
+            style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: "2px" }}>
+            Rickard Berggren
+          </a>
+        </div>
       </div>
     </div>
   );
