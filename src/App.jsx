@@ -2257,7 +2257,7 @@ export default function App() {
         Matchplaneraren är ett verktyg framtaget av{" "}
         <a href="https://www.linkedin.com/in/rickardberggren/"
           target="_blank" rel="noopener noreferrer"
-          style={{ color: "#facc15", textDecoration: "none", fontWeight: 600 }}>
+          style={{ color: "#0a0a0a", textDecoration: "underline", textUnderlineOffset: "2px", fontWeight: 600 }}>
           Rickard Berggren
         </a>
         , ledare i Mälarhöjden-Hägersten FF
