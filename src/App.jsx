@@ -2261,6 +2261,13 @@ export default function App() {
           Rickard Berggren
         </a>
         , ledare i Mälarhöjden-Hägersten FF
+        <div style={{ fontSize: 11, color: "#737373", marginTop: 8 }}>
+          Ett projekt av{" "}
+          <a href="https://halvlek.se/" rel="author"
+            style={{ color: "inherit", textDecoration: "underline", textUnderlineOffset: "2px" }}>
+            Rickard Berggren
+          </a>
+        </div>
       </div>
     </div>
   );
