@@ -427,7 +427,10 @@ export default function App() {
      shouldn't produce a 9-hour elapsed counter when the user comes back. */
   const restoredTimer = (() => {
     try {
-      const raw = localStorage.getItem("sanktan-timer-v1");
+      /* Preferred key is the new "speltid-timer-v1"; fall back to the
+         legacy "sanktan-timer-v1" so existing users don't lose a running
+         timer the first time they load after the rebrand. */
+      const raw = localStorage.getItem("speltid-timer-v1") ?? localStorage.getItem("sanktan-timer-v1");
       if (!raw) return null;
       const d = JSON.parse(raw);
       const MAX_AGE = 6 * 60 * 60 * 1000; // 6 hours
@@ -705,7 +708,7 @@ export default function App() {
   /* Persist timer state so refreshing the page doesn't lose match progress. */
   useEffect(() => {
     try {
-      localStorage.setItem("sanktan-timer-v1", JSON.stringify({
+      localStorage.setItem("speltid-timer-v1", JSON.stringify({
         period: timerPeriod,
         elapsed: timerElapsed,
         running: timerRunning,
@@ -785,7 +788,10 @@ export default function App() {
     setTimerRunning(false);
     setTimerElapsed(0);
     setTimerPeriod(0);
-    try { localStorage.removeItem("sanktan-timer-v1"); } catch {}
+    try {
+      localStorage.removeItem("speltid-timer-v1");
+      localStorage.removeItem("sanktan-timer-v1");
+    } catch {}
     /* Jump to the top so the user starts at Period 1 + the timer card
        rather than wherever the Spelare scroll position left them. */
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -848,7 +854,10 @@ export default function App() {
     setTab("players");
     setTimerRunning(false); setTimerElapsed(0); setTimerPeriod(0);
     setNewName("");
-    try { localStorage.removeItem("sanktan-timer-v1"); } catch {}
+    try {
+      localStorage.removeItem("speltid-timer-v1");
+      localStorage.removeItem("sanktan-timer-v1");
+    } catch {}
   };
 
   const copyShareUrl = async () => {
