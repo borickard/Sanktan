@@ -1,13 +1,13 @@
-# Sanktan ⚽
+# Speltid ⚽
 
-Laguppställningsverktyg för 5v5-fotboll med ungdomar.
+Matchplanerare för ungdomsfotboll (3v3, 5v5, 7v7).
 
 - Hantera spelartrupp med målvakter och positionspreferenser
 - Generera rättvisa matchplaner automatiskt
 - Byt runt spelare med ett tryck
 - Speltidsöversikt per spelare
 
-**Live:** https://borickard.github.io/Sanktan/
+**Live:** https://speltid.halvlek.se/
 
 ## Dela kort länk (Upstash Redis)
 
